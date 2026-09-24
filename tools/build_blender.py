@@ -61,6 +61,18 @@ if MODE != "render-only":
     print("EXPORT combine shapes=%d tris=%d mats=%d | header shapes=%d tris=%d" % (
         info_c["shapes"], info_c["tris"], info_c["materials"], info_h["shapes"], info_h["tris"]))
 
+def fit_camera(cam, margin=1.08):
+    """Frame every render-visible mesh from the camera's current direction."""
+    bpy.context.view_layer.update()
+    pts = []
+    for o in bpy.data.objects:
+        if o.type == "MESH" and not o.hide_render and o.visible_get():
+            pts.extend(c for corner in o.bound_box for c in (o.matrix_world @ Vector(corner)))
+    loc, _ = cam.camera_fit_coords(bpy.context.evaluated_depsgraph_get(), pts)
+    cam.location = loc
+    cam.data.lens /= margin
+
+
 if MODE in ("preview", "final", "render-only", "blend"):
     final = MODE != "preview"
     import blender_kit as K
@@ -76,9 +88,9 @@ if MODE in ("preview", "final", "render-only", "blend"):
     B.attach_header_for_render(head, feeder_rot_deg=-6)
     shots = {
         "render_front_left": ((-10.0, 8.6, 3.5), (0.1, -0.9, 1.75), 40),
-        "render_rear_right": ((9.2, -11.0, 4.2), (0, -1.9, 1.8), 42),
+        "render_rear_right": ((9.2, -11.0, 4.2), (0, -1.9, 1.8), 42, 0.55),
         "render_left_detail": ((-5.6, -1.3, 2.25), (-0.8, -1.45, 1.9), 28),
-        "render_cab_right": ((4.6, 4.2, 4.4), (0.6, 0.6, 2.7), 34),
+        "render_cab_right": ((4.6, 4.2, 4.4), (0.6, 0.6, 2.7), 34, 0.6),
         "render_beer_crate": ((-0.6, 1.22, 2.92), (-0.5, 0.6, 2.36), 28, 1.5),
         "render_beer_bottle": ((-0.3, 1.28, 2.62), (-0.55, 0.84, 2.37), 42, 1.6),
         "render_wheel": ((-3.4, 2.2, 1.05), (-1.25, 0.0, 0.68), 38),
@@ -98,12 +110,15 @@ if MODE in ("preview", "final", "render-only", "blend"):
     sc.view_settings.exposure = base_exp if MODE != "blend" else sc.view_settings.exposure
     if final and MODE != "blend":
         # store image: transparent background, no ground
-        bpy.data.objects["ground"].hide_render = True
+        for n in ("ground", "stubbleEmitter", "swathEmitter"):
+            if n in bpy.data.objects:
+                bpy.data.objects[n].hide_render = True
         sc.render.film_transparent = True
         sc.render.resolution_x = sc.render.resolution_y = 768
         sc.cycles.samples = 48
-        cam = B.add_camera("cam_store", (-10.5, 10.5, 5.0), (0.3, -0.4, 1.6), 38)
+        cam = B.add_camera("cam_store", (-10.5, 10.5, 5.0), (0.3, -0.4, 1.6), 40)
         sc.camera = cam
+        fit_camera(cam)
         sc.render.filepath = os.path.join(OUT, "store_combine.png")
         bpy.ops.render.render(write_still=True)
         # header only
@@ -116,6 +131,7 @@ if MODE in ("preview", "final", "render-only", "blend"):
         cam = B.add_camera("cam_store_h", tuple(Vector(head.matrix_world.translation) + Vector((-4.5, 5.5, 2.8))),
                            tuple(Vector(head.matrix_world.translation) + Vector((0, 0.8, -0.2))), 32)
         sc.camera = cam
+        fit_camera(cam)
         sc.render.filepath = os.path.join(OUT, "store_header.png")
         bpy.ops.render.render(write_still=True)
         for o in bpy.data.objects:

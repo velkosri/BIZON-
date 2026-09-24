@@ -5,6 +5,11 @@ co robi Blender MCP) i wyeksportowany do natywnego formatu GIANTS (`.i3d` + bina
 
 ![Bizon Super Z056](dist/render_front_left.png)
 
+| | |
+|---|---|
+| ![Tył](dist/render_rear_right.png) | ![Napędy lewej strony](dist/render_left_detail.png) |
+| ![Koło](dist/render_wheel.png) | ![Skrzynka Tyskie w kabinie](dist/render_beer_crate.png) |
+
 ## Instalacja
 
 1. Pobierz `dist/FS25_BizonSuperZ056.zip`.
@@ -33,7 +38,7 @@ Kombajn:
   od rozdzielacza do siłowników, zbiornik oleju, filtr powietrza, kolektor, pompa wtryskowa, rozrusznik,
 - w kabinie obok fotela skrzynka Tyskie (20 × 0,5 l): skrzynka z wycięciami i uchwytami, butelki
   toczone ze szkła z grubością ścianki, piwo w środku, etykieta przód/tył, etykieta na szyjce,
-  folia i kapsel z karbowaniem; jedna otwarta butelka przy kierownicy,
+  folia i kapsel z karbowaniem; jedna otwarta butelka na podłodze obok skrzynki,
 - dodatki: lodówka turystyczna na silniku, flaga Polski na maszcie, trąbki, radio CB z anteną,
   gaśnica, łopata, klocek drewna, trójkąt pojazdu wolnobieżnego, tablica rejestracyjna, tabliczka
   znamionowa; na karoserii tylko napisy BIZON / Super Z056.
@@ -83,5 +88,5 @@ BLENDER=/ścieżka/do/blender PY=python3 sh tools/run_final.sh build/final
   (test: `python tools/test_shapes_roundtrip.py <plik z gry>.i3d.shapes`),
 - `tools/make_mod.py` — XML-e pojazdów, modDesc, ikony, zip; `tools/validate_mod.py` — walidacja.
 
-Wymaga Blendera 4.2 oraz Pythona z `numpy` i `Pillow`. Plik `dist/bizonSuperZ056.blend` to gotowa
+Wymaga Blendera 4.2 oraz Pythona z `numpy`, `Pillow`, `scipy` i `soundfile`. Plik `dist/bizonSuperZ056.blend` to gotowa
 scena do podglądu/edycji w Blenderze.
