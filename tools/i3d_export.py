@@ -14,7 +14,7 @@ import numpy as np
 from mathutils import Matrix
 
 sys.path.insert(0, os.path.dirname(__file__))
-from i3d_shapes import Shape, write_shapes  # noqa: E402
+from i3d_shapes import OPT_CPU_MESH, Shape, box_collision_attachment, write_shapes  # noqa: E402
 
 C = Matrix(((-1, 0, 0, 0), (0, 0, 1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 CI = C.inverted()
@@ -202,6 +202,11 @@ class Exporter:
                           [cat["uv0"], cat["uv1"]], subsets)
         else:
             shape = Shape(obj.name + "Shape", sid, cat["pos"], idx, cat["nrm"], None, [cat["uv0"]], subsets)
+        kind = obj.get("kind", "")
+        if kind in ("col_root", "col", "trigger", "exactfill"):
+            shape.raw_tail = box_collision_attachment(cat["pos"])
+        elif kind == "fillvol":
+            shape.options_high |= OPT_CPU_MESH
         self.shapes.append(shape)
         return sid, ",".join(str(m) for m in mat_ids), len(idx) // 3
 

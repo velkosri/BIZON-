@@ -92,6 +92,15 @@ def helper_mesh(name, size, loc, parent, kind, props=None):
     return o
 
 
+def ball(name, r, loc, mat, parent, squash=1.0):
+    import bmesh
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=18, v_segments=10, radius=r)
+    if squash != 1.0:
+        bmesh.ops.scale(bm, vec=Vector((1, 1, squash)), verts=bm.verts)
+    return K.mesh_from_bm(name, bm, mat, parent, loc, smooth_angle=85)
+
+
 # =============================================================== COMBINE
 
 def build_combine():
@@ -326,29 +335,52 @@ def build_cab(p, base):
             bevel=0.004)
     # interior
     seat = empty("seat", (0.0, 0.62, zf), cab)
-    box("seatBase", (0.4, 0.4, 0.3), (0, 0.02, 0.15), "metalDark", seat, bevel=0.02)
-    box("seatCushion", (0.5, 0.48, 0.12), (0, 0.02, 0.38), "seat", seat, bevel=0.04, segs=3)
-    box("seatBack", (0.5, 0.1, 0.55), (0, -0.2, 0.7), "seat", seat, bevel=0.04, segs=3, rot=(0.12, 0, 0))
-    box("seatArmL", (0.06, 0.35, 0.05), (-0.28, 0.0, 0.58), "seat", seat, bevel=0.015)
-    # steering column + wheel
-    col_base = Vector((0, 1.3, zf + 0.02))
-    col_top = Vector((0, 1.08, zf + 0.95))
-    sweep("steerColumn", [col_base, col_top], 0.04, "black", cab, verts=12)
+    box("seatPlate", (0.42, 0.42, 0.03), (0, 0.02, 0.02), "metalDark", seat, bevel=0.008)
+    cyl("seatBellows", 0.13, 0.2, (0, 0.02, 0.14), "rubber", seat, axis="Z", verts=24)
+    for i in range(4):
+        tube("seatBellowsRib%d" % i, 0.14, 0.12, 0.018, (0, 0.02, 0.07 + i * 0.045), "rubber", seat, axis="Z",
+             verts=24)
+    box("seatPan", (0.46, 0.44, 0.05), (0, 0.02, 0.27), "metalDark", seat, bevel=0.01)
+    box("seatCushion", (0.5, 0.48, 0.12), (0, 0.02, 0.36), "seat", seat, bevel=0.05, segs=4)
+    box("seatBack", (0.5, 0.1, 0.55), (0, -0.2, 0.7), "seat", seat, bevel=0.045, segs=4, rot=(0.12, 0, 0))
+    box("seatHeadRest", (0.3, 0.08, 0.14), (0, -0.25, 1.06), "seat", seat, bevel=0.035, segs=4, rot=(0.12, 0, 0))
+    for sx in (-1, 1):
+        box("seatArm%d" % sx, (0.06, 0.34, 0.055), (sx * 0.29, 0.0, 0.58), "seat", seat, bevel=0.025, segs=3)
+        sweep("seatArmPost%d" % sx, [(sx * 0.29, -0.14, 0.3), (sx * 0.29, -0.14, 0.56)], 0.012, "metalDark", seat,
+              verts=8)
+    # sloped toe board with rubber mat in front of the pedals (feet rest here, nothing pokes out)
+    box("toeBoard", (1.3, 0.035, 0.46), (0, 1.33, zf + 0.21), "red", cab, bevel=0.012, rot=(-0.42, 0, 0))
+    box("toeMat", (1.0, 0.012, 0.4), (0, 1.31, zf + 0.21), "rubber", cab, bevel=0.004, rot=(-0.42, 0, 0))
+    box("floorMat", (0.56, 0.62, 0.012), (0, 0.9, zf + 0.026), "rubber", cab, bevel=0.004)
+    # steering column + wheel (driver geometry follows the shipped Claas Arion: feet ~0.46 m ahead of and
+    # ~0.42 m below the hip node)
+    col_base = Vector((0, 1.24, zf + 0.02))
+    col_top = Vector((0, 0.98, zf + 0.88))
+    sweep("steerColumn", [col_base, col_top], 0.032, "black", cab, verts=16)
+    shroud_top = col_base.lerp(col_top, 0.72)
+    sweep("steerShroud", [col_base.lerp(col_top, 0.25), shroud_top], 0.055, "black", cab, verts=20)
+    cyl("steerShroudCap", 0.055, 0.03, tuple(shroud_top), "black", cab, rot=(math.atan2(-(col_top - col_base).y,
+        (col_top - col_base).z), 0, 0), r2=0.04, verts=20)
     # Drivable spins the steeringWheel node about its local Y (GIANTS) = Blender local Z, so the
     # column tilt lives on the parent and the wheel itself keeps an identity rotation.
     axis = (col_top - col_base).normalized()
     tilt = math.atan2(-axis.y, axis.z)
     swt = empty("steeringColumnTilt", tuple(col_top), cab, rot=(tilt, 0, 0))
     swr = empty("steeringWheel", (0, 0, 0), swt)
-    tube("steerRim", 0.2, 0.18, 0.03, (0, 0, 0), "black", swr, axis="Z", verts=36)
+    rim_pts = [(math.cos(2 * math.pi * k / 48) * 0.19, math.sin(2 * math.pi * k / 48) * 0.19, 0) for k in range(48)]
+    sweep("steerRim", rim_pts, 0.017, "black", swr, verts=12, closed=True)
     for i in range(3):
         a = i * 2 * math.pi / 3 + math.pi / 2
-        box("steerSpoke%d" % i, (0.2, 0.025, 0.012), (math.cos(a) * 0.1, math.sin(a) * 0.1, 0), "steel", swr,
-            bevel=0.004, rot=(0, 0, a))
-    cyl("steerHub", 0.04, 0.05, (0, 0, 0), "black", swr, axis="Z")
+        sweep("steerSpoke%d" % i, [(math.cos(a) * 0.035, math.sin(a) * 0.035, -0.03),
+                                   (math.cos(a) * 0.11, math.sin(a) * 0.11, -0.012),
+                                   (math.cos(a) * 0.18, math.sin(a) * 0.18, 0)], 0.009, "steel", swr, verts=10)
+    cyl("steerHub", 0.045, 0.05, (0, 0, -0.03), "black", swr, axis="Z", verts=24, bevel=0.008)
+    ball("steerHubCap", 0.035, (0, 0, -0.005), "black", swr, squash=0.45)
     # dashboard with round gauges + needles
     dash = empty("dash", (0, 1.28, zf + 0.85), cab)
-    box("dashPanel", (0.7, 0.05, 0.22), (0, 0, 0), "black", dash, bevel=0.01, rot=(-0.5, 0, 0))
+    box("dashPanel", (0.7, 0.05, 0.22), (0, 0, 0), "black", dash, bevel=0.03, segs=4, rot=(-0.5, 0, 0))
+    box("dashHood", (0.74, 0.14, 0.025), (0, -0.05, 0.11), "black", dash, bevel=0.012, segs=3, rot=(-0.15, 0, 0))
+    box("dashPedestal", (0.3, 0.14, 0.7), (0, 0.06, -0.42), "black", dash, bevel=0.035, segs=4)
     for nm, x, reg in (("rpm", -0.18, "gauge_rpm"), ("speed", 0.18, "gauge_speed")):
         g = decal("gauge_" + nm, (x, -0.035, 0.012), (0.12, 0.12), REG[reg], "decals", dash, "-Y")
         g.rotation_euler = (-0.5, 0, 0)
@@ -364,16 +396,25 @@ def build_cab(p, base):
     # levers: throttle, header, reel, variator
     for i, (x, h, knob) in enumerate(((0.33, 0.55, "red"), (0.38, 0.5, "black"), (0.43, 0.48, "yellow"),
                                        (-0.35, 0.45, "black"))):
-        sweep("lever%d" % i, [(x, 0.8, zf + 0.25), (x, 0.86, zf + 0.25 + h)], 0.01, "steel", cab, verts=8)
-        K.cyl("leverKnob%d" % i, 0.025, 0.05, (x, 0.86, zf + 0.27 + h), knob, cab, axis="Z", verts=12)
-    box("leverConsole", (0.18, 0.4, 0.3), (0.38, 0.78, zf + 0.15), "red", cab, bevel=0.02)
-    for i, x in enumerate((-0.12, 0.08, 0.22)):
-        box("pedal%d" % i, (0.08, 0.03, 0.14), (x, 1.3, zf + 0.12), "rubber", cab, bevel=0.01, rot=(-0.6, 0, 0))
+        z0 = zf + (0.3 if x > 0 else 0.25)
+        sweep("lever%d" % i, [(x, 0.8, z0), (x, 0.83, z0 + h * 0.6), (x, 0.87, z0 + h)], 0.009, "steel", cab,
+              verts=10)
+        cyl("leverBoot%d" % i, 0.03, 0.07, (x, 0.8, z0 + 0.03), "rubber", cab, axis="Z", r2=0.012, verts=16)
+        ball("leverKnob%d" % i, 0.024, (x, 0.87, z0 + h + 0.015), knob, cab, squash=1.15)
+    box("leverConsole", (0.18, 0.4, 0.3), (0.38, 0.78, zf + 0.15), "red", cab, bevel=0.04, segs=4)
+    box("leverConsoleTop", (0.16, 0.36, 0.012), (0.38, 0.78, zf + 0.302), "rubber", cab, bevel=0.004)
+    for i, x in enumerate((-0.14, 0.12, 0.24)):
+        box("pedal%d" % i, (0.08, 0.025, 0.13), (x, 1.12, zf + 0.13), "rubber", cab, bevel=0.012, segs=3,
+            rot=(-0.7, 0, 0))
+        sweep("pedalArm%d" % i, [(x, 1.15, zf + 0.12), (x, 1.25, zf + 0.2), (x, 1.36, zf + 0.3)], 0.011,
+              "metalDark", cab, verts=8)
     # beer crate on the cab floor in the left rear corner, next to the seat
     D.beer_crate("beerCrate", (-0.51, 0.56, zf + 0.022), cab, REG, rot_z=math.pi / 2 + 0.05, full=19)
     D.beer_bottle("beerOpen", (-0.56, 0.86, zf + 0.022), cab, REG, opened=True, rot_z=2.2)
     # radio + CB, sun-visor stickers
     box("radio", (0.2, 0.15, 0.06), (0.4, 1.25, zt - 0.1), "black", cab, bevel=0.01)
+    # beacon mounting plate, flush on the roof top (the FS beacon model sits on it)
+    box("beaconMount", (0.2, 0.2, 0.014), (BEACON_SPOT[0], BEACON_SPOT[1], zt + 0.157), "black", cab, bevel=0.004)
     box("radioFace", (0.18, 0.005, 0.045), (0.4, 1.325, zt - 0.1), "steel", cab, bevel=0)
     sweep("cbAntenna", [(0.6, 0.45, zt + 0.12), (0.6, 0.45, zt + 1.0)], 0.004, "black", cab, verts=6)
     cyl("cbAntennaBase", 0.03, 0.05, (0.6, 0.45, zt + 0.14), "black", cab, axis="Z")
@@ -397,6 +438,8 @@ LAMP_SPOTS = {
     "workLightFL2": (-0.25, 1.68, 3.97),
     "workLightFR2": (0.25, 1.68, 3.97),
 }
+# away from the horn trumpets (x 0.35..0.47), top of beaconMount = roof top 3.97 + 0.014
+BEACON_SPOT = (-0.35, 0.62, 3.984)
 
 
 
@@ -774,8 +817,8 @@ def build_extras(p):
     sweep("shovelHandle", [(0, 0.0, 0), (0, 0.9, 0.5)], 0.018, "wood", sh, verts=8)
     box("shovelBlade", (0.02, 0.24, 0.3), (0, -0.08, -0.12), "metalDark", sh, bevel=0.01, rot=(0.5, 0, 0))
     box("shovelHolder", (0.05, 0.05, 0.05), (0.02, 0.5, 0.28), "black", sh)
-    # beacon placeholder on the cab roof
-    bc = empty("rbeacon", (0.0, 0.8, 4.02), None, props={"export": False})
+    # beacon placeholder on the cab roof (same spot as the beaconLight01 link node)
+    bc = empty("rbeacon", BEACON_SPOT, None, props={"export": False})
     o = cyl("beaconBase_r", 0.08, 0.05, (0, 0, 0), "black", bc, axis="Z")
     o["export"] = False
     o = cyl("beaconDome_r", 0.07, 0.14, (0, 0, 0.09), "amberGlass", bc, axis="Z", r2=0.04)
@@ -930,11 +973,11 @@ def build_functional(base):
     zf = 2.2
     empty("exitPoint", (-1.7, 1.3, 0.1), f)
     # character in the seat, IK targets on wheel and pedals
-    empty("playerSkin", (0.0, 0.58, zf + 0.38), f)
-    empty("playerRightFootTarget", (0.08, 1.24, zf + 0.12), f)
-    empty("playerLeftFootTarget", (-0.12, 1.24, zf + 0.12), f)
-    empty("playerRightHandTarget", (0.17, 1.02, zf + 0.97), f)
-    empty("playerLeftHandTarget", (-0.17, 1.02, zf + 0.97), f)
+    empty("playerSkin", (0.0, 0.62, zf + 0.52), f)
+    empty("playerRightFootTarget", (0.13, 1.08, zf + 0.1), f, props={"g_rot": "0 -10 0"})
+    empty("playerLeftFootTarget", (-0.14, 1.08, zf + 0.1), f, props={"g_rot": "0 10 0"})
+    empty("playerRightHandTarget", (0.17, 0.94, zf + 0.9), f)
+    empty("playerLeftHandTarget", (-0.17, 0.94, zf + 0.9), f)
     cams = empty("cameras", (0, 0, 0), f)
     tgt = empty("outdoorCameraTarget", (0, -1.4, 2.4), cams, props={"g_rot": "-20 180 0"})
     empty("outdoorCamera1", (0, 0, 0), tgt, props={"kind": "camera", "g_trans": "0 0 12", "fov": 54.4})
@@ -949,7 +992,7 @@ def build_functional(base):
         empty(nm, loc, sl, props={"g_rot": "10 0 0"})
     empty("workLightRearL", (-0.7, -4.05, 3.38), sl, props={"g_rot": "15 180 0"})
     empty("workLightRearR", (0.7, -4.05, 3.38), sl, props={"g_rot": "15 180 0"})
-    empty("beaconLight01", (0.0, 0.8, 4.0), sl)
+    empty("beaconLight01", BEACON_SPOT, sl)
     # real lights (spot lights shine along local -Z in GIANTS)
     rl = empty("realLights", (0, 0, 0), f)
     L = lambda n, loc, rot, col, rng, cone, extra=None: empty(n, loc, rl, props=dict(
@@ -982,6 +1025,7 @@ def build_functional(base):
     tank = empty("tankNodes", (0, 0, 0), f)
     fv = helper_mesh("fillVolume", (2.1, 2.45, 0.95), (0, -0.96, 2.95), tank, "fillvol")
     helper_mesh("exactFillRootNode", (1.9, 2.2, 0.5), (0, -0.96, 3.1), tank, "exactfill")
+    helper_mesh("exactFillRootNodeFuel", (0.5, 0.45, 0.5), (0.5, -4.0, 2.7), tank, "exactfill")
     empty("unloadInfo", (-1.0, 0.1, 2.5), tank)
     empty("loadInfo", (0.35, -0.4, 3.2), tank)
     empty("exhaustParticle", (-0.45, -3.25, 4.1), f, props={"g_rot": "-90 0 0"})

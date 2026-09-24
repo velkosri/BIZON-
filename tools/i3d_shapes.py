@@ -16,6 +16,31 @@ OPT_COLOR = 0x20
 OPT_SKIN = 0x40
 OPT_TANGENTS = 0x80
 OPT_GENERIC = 0x200
+# set on shapes the engine must keep in CPU memory (fill volumes); seen as 0x1000000 in shipped FS25 files
+OPT_CPU_MESH = 0x1000000
+
+
+def box_collision_attachment(positions):
+    """Precooked convex hull ('cm' v4) for an axis-aligned box collision mesh, as GIANTS Editor
+    stores it. Without it the engine cooks at runtime and wheel shapes on the component fail.
+    Layout: count, type 2, size | 'cm', u16 4, nverts, margin, volume, com[3], inertia/mass[9],
+    verts inset by margin."""
+    p = np.asarray(positions, dtype=np.float64).reshape(-1, 3)
+    lo, hi = p.min(0), p.max(0)
+    c = (lo + hi) / 2
+    d = hi - lo
+    margin = float(min(0.04, 0.1 * d.min()))
+    vol = float(np.prod(d))
+    ix = (d[1] ** 2 + d[2] ** 2) / 12
+    iy = (d[0] ** 2 + d[2] ** 2) / 12
+    iz = (d[0] ** 2 + d[1] ** 2) / 12
+    h = d / 2 - margin
+    signs = [(-1, 1, 1), (1, 1, 1), (-1, 1, -1), (-1, -1, 1), (1, -1, 1), (1, 1, -1), (-1, -1, -1), (1, -1, -1)]
+    verts = [c + np.array(s) * h for s in signs]
+    body = b"cm" + struct.pack("<HIff", 4, 8, margin, vol) + struct.pack("<3f", *c)
+    body += struct.pack("<9f", ix, 0, 0, 0, iy, 0, 0, 0, iz)
+    body += b"".join(struct.pack("<3f", *v) for v in verts)
+    return struct.pack("<III", 1, 2, len(body)) + body
 
 
 class Cipher:
