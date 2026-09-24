@@ -241,27 +241,24 @@ def build_air_filter(e, loc, outlet):
         ring.location = pts[idx]
 
 
-def cab_details(cab, zf, zt, yf, yb, x0, x1, lean):
-    """Wiring looms, fuse box, switches, extra gauges, cab fan, dome light, CB mic lead, lever linkage."""
-    for sx, x in ((-1, x0 + 0.045), (1, x1 - 0.045)):
-        a, b = Vector((x, yf - 0.03, zf + 0.5)), Vector((x, yf + lean - 0.04, zt - 0.06))
-        pts = [Vector((x * 0.7, yf - 0.05, zf + 0.72))] + [a.lerp(b, k / 5) for k in range(6)] + \
-              [Vector((x, yf + lean - 0.2, zt - 0.05)), Vector((x, yb + 0.1, zt - 0.05))]
-        sweep("pillarLoom%d" % sx, pts, 0.0075, "wireBlack", cab, verts=6)
-        for k in range(1, 5):
-            box("loomClip%d_%d" % (sx, k), (0.02, 0.012, 0.018), tuple(a.lerp(b, k / 5)), "plasticBlack", cab,
-                bevel=0.002)
-    # fuse box under the dash with fuses and hanging wires
+def platform_details(cab, zf, ztop, xp, ypf, yf):
+    """Open-platform fittings: loom up the right front post to the canopy lamps, fuse box, extra gauges,
+    warning lamps, toggles, dome lamp, CB mic with coiled lead, lever gate."""
+    zc = ztop - 0.075
+    post = [Vector((xp - 0.034, ypf - 0.03, zf + 0.62 + k * (zc - zf - 0.75) / 5)) for k in range(6)]
+    pts = [Vector((0.3, yf - 0.1, zf + 0.55)), Vector((xp - 0.06, ypf - 0.06, zf + 0.58))] + post + \
+          [Vector((xp - 0.06, ypf - 0.03, zc - 0.04)), Vector((0.62, ypf - 0.03, zc - 0.04))]
+    sweep("postLoom", pts, 0.0075, "wireBlack", cab, verts=6)
+    for k, q in enumerate(post[1:-1]):
+        box("postLoomClip%d" % k, (0.022, 0.022, 0.016), tuple(q), "plasticBlack", cab, bevel=0.002)
     fb = empty("fuseBox", (0.22, yf - 0.1, zf + 0.58), cab)
     box("fuseBoxBody", (0.2, 0.05, 0.11), (0, 0, 0), "plasticBlack", fb, bevel=0.008)
     for k, m in enumerate(("redClean", "yellow", "steel", "redClean", "cream", "yellow", "steel", "redClean")):
         box("fuse%d" % k, (0.016, 0.012, 0.03), (-0.075 + k * 0.021, -0.03, 0.01), m, fb, bevel=0.002)
     for k, (m, end) in enumerate((("wireRed", (0.3, yf - 0.25, zf + 0.05)),
                                   ("wireBlack", (0.15, yf - 0.2, zf + 0.04)),
-                                  ("wireRed", (-0.05, yf - 0.02, zf + 0.62)),
-                                  ("wireBlack", (0.3, yf - 0.02, zf + 0.9)))):
+                                  ("wireRed", (-0.05, yf - 0.02, zf + 0.62)))):
         hose("fuseWire%d" % k, (0.18 + k * 0.03, yf - 0.1, zf + 0.53), end, 0.1, 0.004, m, cab)
-    # extra small gauges (oil pressure, coolant temp, volts), warning lamps, toggle switches
     dash = empty("dashExtras", (0, yf - 0.17, zf + 0.85), cab, rot=(-0.5, 0, 0))
     for k, x in enumerate((-0.28, 0.0, 0.28)):
         z = -0.075 if k == 1 else -0.06
@@ -277,36 +274,16 @@ def cab_details(cab, zf, zt, yf, yb, x0, x1, lean):
         x = -0.2 + k * 0.08 if k < 3 else 0.04 + (k - 3) * 0.08
         cyl("toggleBase%d" % k, 0.01, 0.012, (x, -0.03, -0.1), "chrome", dash, axis="Y", verts=10)
         sweep("toggleLever%d" % k, [(x, -0.035, -0.1), (x, -0.06, -0.09)], 0.003, "chrome", dash, verts=6)
-    # dome light + speaker in the headliner, small cab fan on the right pillar
-    box("headliner", (x1 - x0 - 0.06, yf - yb - 0.05, 0.015), (0, (yf + yb) / 2 + 0.05, zt - 0.02), "cream", cab,
-        bevel=0.004)
-    cyl("domeLight", 0.05, 0.02, (0, (yf + yb) / 2, zt - 0.035), "lampGlass", cab, axis="Z", verts=20)
-    tube("domeRim", 0.055, 0.05, 0.02, (0, (yf + yb) / 2, zt - 0.035), "plasticBlack", cab, axis="Z", verts=20)
-    cyl("speaker", 0.06, 0.02, (-0.45, yb + 0.25, zt - 0.035), "plasticBlack", cab, axis="Z", verts=20)
-    fan = empty("cabFan", (x1 - 0.1, yf - 0.02, zt - 0.2), cab, rot=(0, 0, math.radians(-35)))
-    for k in range(3):
-        tube("fanCage%d" % k, 0.075 - k * 0.022, 0.07 - k * 0.022, 0.004, (0, -0.03, 0), "chrome", fan, axis="Y",
-             verts=24)
-    for k in range(8):
-        box("fanCageBar%d" % k, (0.15, 0.003, 0.003), (0, -0.03, 0), "chrome", fan, bevel=0, rot=(0, k * math.pi / 8, 0))
-    for k in range(4):
-        a = k * math.pi / 2 + 0.3
-        box("fanBlade%d" % k, (0.055, 0.004, 0.028), (math.cos(a) * 0.035, -0.015, math.sin(a) * 0.035),
-            "plasticBlack", fan, bevel=0.002, rot=(0.35, -a, 0))
-    cyl("fanMotor", 0.03, 0.05, (0, 0.02, 0), "plasticBlack", fan, axis="Y", verts=16)
-    box("fanMount", (0.02, 0.06, 0.02), (0, 0.06, 0), "metalDark", fan, bevel=0.003)
-    # CB mic on a hook with coiled lead to the radio
-    box("micHook", (0.02, 0.01, 0.03), (0.52, yf - 0.1, zt - 0.2), "metalDark", cab, bevel=0.002)
-    box("cbMic", (0.05, 0.03, 0.07), (0.52, yf - 0.12, zt - 0.25), "plasticBlack", cab, bevel=0.012, segs=3)
-    helix("micLead", (0.52, yf - 0.12, zt - 0.29), (0.42, yf - 0.2, zt - 0.14), 0.01, 9, 0.0022, "plasticBlack",
-          cab)
-    # lever gate plate and linkage rods through the floor
+    cyl("domeLight", 0.05, 0.02, (0, 0.9, zc - 0.035), "lampGlass", cab, axis="Z", verts=20)
+    tube("domeRim", 0.055, 0.05, 0.02, (0, 0.9, zc - 0.035), "plasticBlack", cab, axis="Z", verts=20)
+    hook = Vector((xp - 0.05, ypf - 0.05, zf + 1.2))
+    box("micHook", (0.02, 0.01, 0.03), tuple(hook), "metalDark", cab, bevel=0.002)
+    box("cbMic", (0.05, 0.03, 0.07), tuple(hook + Vector((0, -0.02, -0.05))), "plasticBlack", cab, bevel=0.012,
+        segs=3)
+    helix("micLead", hook + Vector((0, -0.02, -0.09)), (0.42, 1.2, 3.68), 0.01, 12, 0.0022, "plasticBlack", cab)
     box("leverGate", (0.13, 0.3, 0.008), (0.38, 0.8, zf + 0.308), "plasticBlack", cab, bevel=0.002)
     for k, x in enumerate((0.33, 0.38, 0.43)):
         box("gateSlot%d" % k, (0.012, 0.2, 0.01), (x, 0.8, zf + 0.31), "metalDark", cab, bevel=0)
-    # inner door handle and window latch
-    box("doorInnerHandle", (0.02, 0.1, 0.02), (x0 + 0.03, 1.0, zf + 0.62), "metalDark", cab, bevel=0.005)
-    box("windowLatch", (0.02, 0.05, 0.015), (x0 + 0.02, 0.9, zf + 1.1), "chrome", cab, bevel=0.003)
 
 
 def hollow_walker(name, x, parent):

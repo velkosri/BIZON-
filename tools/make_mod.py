@@ -79,9 +79,9 @@ def combine_xml():
 
     def wheel(dim, left, repr_, rear):
         extra = ' rotSpeed="-1" driveNode="%s"' % m(repr_.replace("axis", "wheel")) if rear else ""
-        load, spring, damper = ("1.2", "40", "35") if rear else ("2.2", "60", "45")
+        load, spring, damper = ("1.2", "55", "45") if rear else ("2.2", "75", "55")
         return (f'                    <wheel dimensions="{dim}" isLeft="{str(left).lower()}" hasTireTracks="true" hasParticles="true">\n'
-                f'                        <physics tipOcclusionAreaGroupId="1" restLoad="{load}" repr="{m(repr_)}"{extra} forcePointRatio="0.4" initialCompression="30" suspTravel="0.1" spring="{spring}" damper="{damper}" frictionScale="1.6"/>\n'
+                f'                        <physics tipOcclusionAreaGroupId="1" restLoad="{load}" repr="{m(repr_)}"{extra} forcePointRatio="0.4" initialCompression="30" suspTravel="0.1" spring="{spring}" damper="{damper}" frictionScale="2"/>\n'
                 f'                    </wheel>')
 
     wheels_def = "\n".join([wheel("480_80R26", True, "wheelFrontLeft", False),
@@ -265,7 +265,7 @@ def combine_xml():
     </drivable>
 
     <attacherJoints>
-        <attacherJoint jointType="cutter" node="{m('attacherJointCutter')}" jointPositionOffset="{f3(A['jointPosOffset'])}" lowerTransLimit="0 0 0" lowerRotLimit="0 0 15" dynamicLowerRotLimit="true" lockDownRotLimit="true" moveTime="3" comboTime="0" delayedObjectChanges="false" delayedObjectChangesOnAttach="true">
+        <attacherJoint jointType="cutter" node="{m('attacherJointCutter')}" lowerTransLimit="0 0 0" lowerRotLimit="0 0 15" dynamicLowerRotLimit="true" lockDownRotLimit="true" moveTime="3" comboTime="0" delayedObjectChanges="false" delayedObjectChangesOnAttach="true">
             <distanceToGround lower="{hl}" upper="{hu}"/>
             <rotationNode node="{m('attacherJointRot')}" lowerRotation="{jl}" upperRotation="{ju}" startRotation="0 0 0"/>
             <schema position="1 0" rotation="0" invertX="true"/>
@@ -682,10 +682,6 @@ def main():
     for i3d in (os.path.join(MOD, VEH_C, "bizonSuperZ056.i3d"), os.path.join(MOD, VEH_H, "bizonHeader42.i3d")):
         ET.parse(i3d)
     shutil.copy(os.path.join(BUILD, "textures", "bizon_decals_diffuse.dds"), os.path.join(MOD, "textures"))
-    for vm in ("bizon_vmask", "bizonHeader_vmask"):
-        src = os.path.join(BUILD, "textures", vm + ".png")
-        if os.path.exists(src):
-            Image.open(src).convert("RGB").save(os.path.join(MOD, "textures", vm + ".dds"), "DDS", pixel_format="DXT1")
     snd_dir = os.path.join(MOD, VEH_C, "sounds")
     os.makedirs(snd_dir, exist_ok=True)
     for fn in os.listdir(os.path.join(BUILD, "sounds")):
