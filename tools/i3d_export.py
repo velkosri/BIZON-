@@ -103,12 +103,16 @@ class Exporter:
             x = ['    <Material name=%s materialId="%d" customShaderId="%d">' % (name, mid, self.file_id(SHARED["shader"])),
                  '      <Texture fileId="%d"/>' % self.file_id(SHARED["white"]),
                  '      <Normalmap fileId="%d"/>' % self.file_id(SHARED["normal"]),
-                 '      <Glossmap fileId="%d"/>' % self.file_id(SHARED["vmask"]),
+                 '      <Glossmap fileId="%d"/>' % self.file_id(self.local_files.get("vmask", SHARED["vmask"])),
                  '      <Custommap name="detailSpecular" fileId="%d"/>' % self.file_id(det[1]),
                  '      <Custommap name="detailNormal" fileId="%d"/>' % self.file_id(det[2]),
                  '      <Custommap name="detailDiffuse" fileId="%d"/>' % self.file_id(det[0]),
-                 '      <CustomParameter name="colorScale" value="%s %s %s"/>' % tuple(fmt(c) for c in col),
-                 '    </Material>']
+                 '      <CustomParameter name="colorScale" value="%s %s %s"/>' % tuple(fmt(c) for c in col)]
+            params = mat.get("fs_params")
+            for k in ("smoothnessScale", "clearCoatIntensity", "clearCoatSmoothness"):
+                if params and k in params:
+                    x.append('      <CustomParameter name="%s" value="%s"/>' % (k, fmt(params[k])))
+            x.append('    </Material>')
         elif kind == "glass":
             col = mat["fs_color"]
             x = ['    <Material name=%s materialId="%d" diffuseColor="%s %s %s %s" specularColor="1 1 1" alphaBlending="true">'

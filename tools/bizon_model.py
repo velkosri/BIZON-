@@ -14,6 +14,7 @@ from mathutils import Euler, Matrix, Vector
 sys.path.insert(0, os.path.dirname(__file__))
 import blender_kit as K  # noqa: E402
 import bizon_detail as D  # noqa: E402
+import bizon_engine as EN  # noqa: E402
 from blender_kit import box, cyl, empty, hose, pulley, sweep, tube, decal, belt, rivets, gear, poly_prism  # noqa
 
 TEX = os.environ.get("BIZON_TEX", "build/textures")
@@ -29,16 +30,22 @@ WHEELBASE = 3.5
 PIVOT = Vector((0, 0.55, 1.45))   # feeder pivot
 FEEDER_ANGLE = math.radians(20)
 FEEDER_LEN = 1.75
+# feeder tilt when lowered; keeps the cutterbar ~5 cm and the header collision ~10 cm above flat ground,
+# otherwise the locked-pitch joint presses the header into the terrain and the parked combine creeps
+FEEDER_LOWER = 6
 
 ANIM = {}  # extra data for XML generation (converted to GIANTS space by the exporter)
 
 
 def materials():
     M = K.material
-    M("red", (0.62, 0.045, 0.035), 0.42, detail="paintOld", grime=0.45)
-    M("redClean", (0.66, 0.06, 0.05), 0.35, detail="paint", grime=0.15)
-    M("cream", (0.86, 0.82, 0.70), 0.45, detail="paintOld", grime=0.4)
-    M("yellow", (0.93, 0.70, 0.08), 0.45, detail="paint", grime=0.3)
+    # old, sun-faded factory paint: little clear coat; values follow base-game calibrated materials
+    old_paint = {"smoothnessScale": 0.7, "clearCoatIntensity": 0.15, "clearCoatSmoothness": 0.35}
+    M("red", (0.62, 0.045, 0.035), 0.42, detail="calPaint", grime=0.45, params=old_paint)
+    M("redClean", (0.66, 0.06, 0.05), 0.35, detail="calPaint", grime=0.15,
+      params={"smoothnessScale": 0.85, "clearCoatIntensity": 0.4, "clearCoatSmoothness": 0.7})
+    M("cream", (0.86, 0.82, 0.70), 0.45, detail="calPaint", grime=0.4, params=old_paint)
+    M("yellow", (0.93, 0.70, 0.08), 0.45, detail="calPaint", grime=0.3, params=old_paint)
     M("black", (0.03, 0.03, 0.03), 0.55, detail="paint", grime=0.2)
     M("metalDark", (0.16, 0.16, 0.16), 0.5, 0.7, detail="scratched", grime=0.3)
     M("steel", (0.55, 0.55, 0.56), 0.35, 1.0, detail="silver")
@@ -52,7 +59,8 @@ def materials():
     M("seat", (0.10, 0.09, 0.08), 0.6, detail="leather")
     M("plasticBlack", (0.04, 0.04, 0.045), 0.5, detail="plastic")
     M("wood", (0.45, 0.30, 0.16), 0.7, detail="wood")
-    M("engineGrey", (0.30, 0.34, 0.33), 0.5, 0.3, detail="paintOld", grime=0.7)
+    M("engineGrey", (0.30, 0.34, 0.33), 0.5, 0.3, detail="castIron", grime=0.7,
+      params={"smoothnessScale": 0.8, "clearCoatIntensity": 0.1, "clearCoatSmoothness": 0.2})
     M("hoseBlack", (0.02, 0.02, 0.02), 0.6, detail="rubber")
     M("wireRed", (0.55, 0.02, 0.02), 0.5, detail="plastic")
     M("wireBlack", (0.02, 0.02, 0.02), 0.5, detail="plastic")
@@ -69,7 +77,7 @@ def materials():
     M("mirror", (0.8, 0.8, 0.8), 0.02, 1.0, detail="chrome")
     M("grain", (0.85, 0.66, 0.30), 0.8, detail="plastic")
     M("inv", (0.5, 0.5, 0.5), 0.5, detail="paint")  # non-rendered helpers
-    M("rimPaint", (0.80, 0.76, 0.64), 0.45, detail="paintOld", grime=0.4)
+    M("rimPaint", (0.80, 0.76, 0.64), 0.45, detail="calPaint", grime=0.4, params=old_paint)
     M("steelDirty", (0.35, 0.34, 0.32), 0.5, 0.8, detail="scratched")
     M("bottleGlass", (0.36, 0.16, 0.04), 0.03, alpha=0.8, fs="glass")
     M("beerLiquid", (0.75, 0.45, 0.08), 0.05, alpha=0.9, fs="glass")
@@ -429,6 +437,7 @@ def build_cab(p, base):
     for i, (x, ln) in enumerate(((0.35, 0.34), (0.47, 0.42))):
         cyl("horn%d" % i, 0.045, ln, (x, 0.6, zt + 0.2), "chrome", cab, axis="Y", r2=0.015, verts=20)
         box("hornBracket%d" % i, (0.03, 0.05, 0.05), (x, 0.6, zt + 0.16), "black", cab)
+    EN.cab_details(cab, zf, zt, yf, yb, x0, x1, lean)
     return cab
 
 
@@ -528,35 +537,9 @@ def build_engine(p, base):
     box("engineSideL_R", (0.03, 0.35, 0.8), (-0.86, y1 + 0.2, 2.8), "red", e, bevel=0.01)
     # engine block
     blk = empty("engineBlock", (0.05, -3.1, 2.75), e)
-    box("block", (0.5, 1.05, 0.5), (0, 0, 0), "engineGrey", blk, bevel=0.03)
-    box("head", (0.42, 1.0, 0.18), (0, 0, 0.32), "engineGrey", blk, bevel=0.02)
-    box("valveCover", (0.34, 0.95, 0.1), (0, 0, 0.45), "black", blk, bevel=0.03, segs=3)
-    cyl("oilFiller", 0.03, 0.06, (0.0, 0.3, 0.52), "yellow", blk, axis="Z")
-    box("oilPan", (0.44, 0.9, 0.16), (0, 0, -0.32), "engineGrey", blk, bevel=0.03)
-    for i in range(6):
-        y = -0.42 + i * 0.168
-        sweep("injLine%d" % i, [(0.25, y, 0.05), (0.3, y, 0.2), (0.2, y, 0.34)], 0.005, "steel", blk, verts=6)
-        sweep("exhPort%d" % i, [(-0.22, y, 0.25), (-0.3, y, 0.25)], 0.035, "rust", blk, verts=10)
-    box("injPump", (0.14, 0.4, 0.2), (0.3, 0.05, -0.02), "engineGrey", blk, bevel=0.02)
-    sweep("exhManifold", [(-0.3, -0.45, 0.25), (-0.3, 0.45, 0.25)], 0.05, "rust", blk, verts=12)
-    cyl("starter", 0.06, 0.25, (0.28, 0.45, -0.2), "black", blk, axis="Y")
-    # alternator + fan belt (front of engine points to +Y)
-    alt = pulley("alternatorPulley", 0.05, 0.03, (0.2, 0.6, 0.12), "metalDark", blk, spokes=0, axis="Y")
-    cyl("alternator", 0.09, 0.16, (0.2, 0.5, 0.12), "steel", blk, axis="Y", verts=20)
-    crank = pulley("crankPulley", 0.1, 0.04, (0, 0.6, -0.15), "metalDark", blk, spokes=4, axis="Y")
-    fan = pulley("fanPulley", 0.08, 0.04, (0, 0.6, 0.2), "metalDark", blk, spokes=4, axis="Y")
-    ANIM.setdefault("motor_rot", []).extend([("alternatorPulley", "Y", 1500), ("crankPulley", "Y", 700),
-                                             ("fanPulley", "Y", 900)])
-    # fan belt as a triangle loop in XZ plane at y=0.6
-    loop = [(0, -0.26), (0.28, 0.12), (0.0, 0.29), (-0.09, 0.2), (-0.1, -0.15)]
-    pts = [Vector((x, 0.6, z)) for x, z in loop]
-    sweep("fanBelt", pts, 0, "rubberBelt", blk, closed=True,
-          profile=[(-0.012, -0.006), (0.012, -0.006), (0.012, 0.006), (-0.012, 0.006)], twist_up=(0, 1, 0))
-    # air filter (oil bath) + intake
-    cyl("airFilter", 0.13, 0.42, (0.45, y1 + 0.6, 3.45), "black", e, axis="Z", verts=28)
-    cyl("airFilterCap", 0.15, 0.06, (0.45, y1 + 0.6, 3.68), "black", e, axis="Z", verts=28, r2=0.05)
-    sweep("intake", [(0.45, y1 + 0.6, 3.25), (0.35, y1 + 0.8, 3.1), (0.25, -3.1, 3.08)], 0.05, "hoseBlack", e,
-          verts=12)
+    EN.build_sw400(blk, ANIM)
+    # oil-bath air cleaner above the roof, hose down to the intake manifold inlet
+    EN.build_air_filter(e, (0.45, y1 + 0.6, 3.45), (0.32, -3.1, 3.08))
     # exhaust: vertical pipe with rain flap
     ex = [(-0.35, -3.1, 3.0), (-0.45, -3.2, 3.2), (-0.45, -3.25, 3.4), (-0.45, -3.25, 4.05)]
     sweep("exhaustPipe", ex, 0.055, "rust", e, verts=16)
@@ -585,8 +568,7 @@ def build_engine(p, base):
     hose("radHoseBot", (-0.66, -3.4, 2.5), (-0.15, -3.4, 2.5), 0.05, 0.03, "hoseBlack", e)
     cyl("expansionTank", 0.08, 0.3, (-0.55, -2.55, 3.2), "cream", e, axis="Y", verts=20)
     # diesel tank behind the engine (right)
-    box("fuelTank", (0.5, 0.45, 0.5), (0.5, y1 - 0.05, 2.7), "red", e, bevel=0.04, segs=3)
-    cyl("fuelCap", 0.05, 0.05, (0.5, y1 - 0.05, 2.98), "black", e, axis="Z", verts=16)
+    EN.build_fuel_tank(e, (0.5, y1 - 0.05, 2.7))
     hose("fuelLine", (0.35, y1 + 0.1, 2.5), (0.3, -3.1, 2.6), 0.08, 0.008, "hoseBlack", e)
     return e
 
@@ -613,15 +595,14 @@ def build_rear(p, base):
         wb = empty("walkerShakeB%d" % ph, (0, 0, off), wa)
         for i in idx:
             x = -0.57 + i * 0.38
-            prof = []
-            for s in range(5):
-                y = 0.35 - s * 0.24
-                prof += [(y, 0.0), (y - 0.18, 0.12)]
-            prof += [(-0.95, 0.0), (-0.95, -0.12), (0.35, -0.12)]
-            poly_prism("walker%d" % i, prof, 0.34, "galv", wb, plane="YZ", offset=x - 0.17)
+            EN.hollow_walker("walker%d" % i, x, wb)
     ANIM["walkers"] = {"A": "walkerShakeA", "B": ["walkerShakeB0", "walkerShakeB1"]}
     # chaff spreader / sieve outlet under the rear
-    box("sieveOutlet", (1.3, 0.35, 0.08), (0, -3.45, 0.62), "galv", p, bevel=0.005)
+    for sx in (-1, 1):
+        box("chafferFrame%d" % sx, (0.03, 0.4, 0.08), (sx * 0.65, -3.45, 0.62), "galv", p, bevel=0.005)
+    for k in range(10):
+        box("chafferSlat%d" % k, (1.28, 0.035, 0.004), (0, -3.63 + k * 0.04, 0.62), "galv", p, bevel=0,
+            rot=(0.6, 0, 0))
     # rear: tail lights, turn signals, slow vehicle triangle, number plate
     for sx in (-1, 1):
         tl = empty("tailLight%d" % sx, (sx * 0.72, y1 - 0.02, 1.62), p)
@@ -787,10 +768,15 @@ def build_electrics(p):
     box("fuseBox", (0.04, 0.22, 0.16), (0.745, 0.6, 2.62), "black", e, bevel=0.008)
     box("fuseBoxLid", (0.01, 0.2, 0.14), (0.768, 0.6, 2.62), "plasticBlack", e, bevel=0.003)
     hose("cableFuse", (0.92, 1.35, 1.9), (0.76, 0.55, 2.55), 0.1, 0.009, "wireRed", e)
-    # front loom along the railing to headlights & turn lights
+    # front loom: under the platform to the front edge, then up the railing uprights to the lamps
+    # (never through the cab: those wires showed as black lines across the windscreen)
     for sx in (-1, 1):
-        hose("wireHead%d" % sx, (0.76, 0.66, 2.65), (sx * 0.95, 1.6, 3.18), 0.1, 0.005, "wireBlack", e)
-        hose("wireTurn%d" % sx, (0.76, 0.62, 2.62), (sx * 1.17, 1.62, 2.93), 0.1, 0.005, "wireBlack", e)
+        up = [(0.8, 0.66, 2.12), (0.8, 1.5, 2.12), (sx * 0.77, 1.56, 2.12), (sx * 0.77, 1.62, 2.2)]
+        sweep("wireHead%d" % sx, up + [(sx * 0.77, 1.62, 3.1), (sx * 0.85, 1.62, 3.18), (sx * 0.93, 1.6, 3.18)],
+              0.005, "wireBlack", e, verts=6)
+        sweep("wireTurn%d" % sx, [(p[0] + 0.012 * sx, p[1], p[2]) for p in up] +
+              [(sx * 0.785, 1.62, 2.9), (sx * 1.0, 1.62, 2.93), (sx * 1.15, 1.62, 2.93)], 0.005, "wireBlack", e,
+              verts=6)
     # rear loom along the right housing wall with clips
     loom = [(0.8, 0.55, 2.3), (0.81, -0.3, 2.25), (0.81, -1.5, 2.25), (0.81, -2.8, 2.25), (0.81, -4.0, 2.0),
             (0.75, -5.25, 1.62)]
@@ -805,14 +791,7 @@ def build_electrics(p):
 
 def build_extras(p):
     x = empty("extras", (0, 0, 0), p)
-    # cooler box on the engine deck (left rear) with sticker
-    cb = empty("coolerBox", (-0.45, -3.72, 2.4), x)
-    box("coolerBody", (0.45, 0.3, 0.32), (0, 0, 0.16), "cream", cb, bevel=0.03, segs=3)
-    box("coolerLid", (0.47, 0.32, 0.06), (0, 0, 0.34), "redClean", cb, bevel=0.02)
-    sweep("coolerHandle", [(-0.2, 0, 0.37), (-0.2, 0, 0.45), (0.2, 0, 0.45), (0.2, 0, 0.37)], 0.01, "plasticBlack",
-          cb, verts=6)
-    # wooden block + chain (for towing), shovel on the side (every Bizon has one)
-    box("woodBlock", (0.2, 0.3, 0.12), (0.65, -3.75, 2.46), "wood", x, bevel=0.01)
+    # shovel on the side (every Bizon has one)
     sh = empty("shovel", (-0.82, -3.7, 1.3), x)
     sweep("shovelHandle", [(0, 0.0, 0), (0, 0.9, 0.5)], 0.018, "wood", sh, verts=8)
     box("shovelBlade", (0.02, 0.24, 0.3), (0, -0.08, -0.12), "metalDark", sh, bevel=0.01, rot=(0.5, 0, 0))
@@ -862,8 +841,8 @@ def build_feeder(base):
     sweep("feederChain", [Vector((-0.64, q.x, q.y)) for q in chain], 0, "metalDark", f, closed=True,
           profile=[(-0.008, -0.006), (0.008, -0.006), (0.008, 0.006), (-0.008, 0.006)], twist_up=(1, 0, 0))
     # attacher joint node at the mouth; tilted up by the lower rotation so the header sits level when lowered
-    aj = empty("attacherJointCutter", tuple(m + Vector((0, 0.03, 0))), rot, rot=(math.radians(10), 0, 0))
-    ANIM["feeder"] = {"lowerRot": 10, "upperRot": -18, "mouth": list(m + PIVOT)}
+    aj = empty("attacherJointCutter", tuple(m + Vector((0, 0.03, 0))), rot, rot=(math.radians(FEEDER_LOWER), 0, 0))
+    ANIM["feeder"] = {"lowerRot": FEEDER_LOWER, "upperRot": -18, "mouth": list(m + PIVOT)}
     # hydraulic lift cylinders (chassis -> feeder underside)
     for sx, side in ((-1, "Left"), (1, "Right")):
         ref_local = feeder_point(1.05, -0.33)
@@ -1051,7 +1030,7 @@ HW = 4.2   # cutting width
 
 def build_header():
     """Grain header; origin = input attacher joint at the feeder mouth. Header floor sits ~0.5 m below."""
-    root = helper_mesh("bizonHeader_main_component1", (4.4, 1.6, 0.6), (0, 0.85, -0.28), None, "col_root")
+    root = helper_mesh("bizonHeader_main_component1", (4.4, 1.5, 0.5), (0, 0.85, -0.21), None, "col_root")
     base = empty("header_root", (0, 0, 0), root)
     v = empty("hvis", (0, 0, 0), base)
     half = HW / 2 + 0.12

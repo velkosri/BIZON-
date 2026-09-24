@@ -14,6 +14,7 @@ from mathutils import Euler, Vector
 sys.path.insert(0, os.path.dirname(__file__))
 import bizon_model as B  # noqa: E402
 import i3d_export as X  # noqa: E402
+import vmask_bake as V  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = os.path.abspath(argv[0] if argv else "build")
@@ -45,17 +46,44 @@ def feeder_mouth_height(deg_down):
 anim["jointHeightLower"] = feeder_mouth_height(B.ANIM["feeder"]["lowerRot"])
 anim["jointHeightUpper"] = feeder_mouth_height(B.ANIM["feeder"]["upperRot"])
 
+
+def joint_position_offset():
+    """Feeder pivot in the cutter attacher node's frame (GIANTS axes). Base-game combines put the physics
+    joint there (jointPositionOffset) so the header hangs off the body instead of a joint at the mouth."""
+    bpy.context.view_layer.update()
+    aj = bpy.data.objects["attacherJointCutter"].matrix_world
+    piv = bpy.data.objects["attacherJointRot"].matrix_world.translation
+    p = aj.inverted() @ piv
+    return [-p.x, p.z, p.y]
+
+
+anim["jointPosOffset"] = joint_position_offset()
+
 if MODE != "render-only":
     for d in ("vehicles/bizonSuperZ056", "vehicles/bizonHeader42", "textures"):
         os.makedirs(os.path.join(MOD, d), exist_ok=True)
     X.prepare_for_export(comb)
     X.prepare_for_export(head)
+    bake = os.environ.get("BIZON_BAKE", "1") != "0"
+    vm_c = vm_h = None
+    if bake:
+        vm_c, vm_h = V.render_meshes(comb), V.render_meshes(head)
+        print("UV1 atlas area combine %.3f header %.3f" % (V.unwrap_atlas(vm_c), V.unwrap_atlas(vm_h)))
+    vloc = {"vmask": "../../textures/bizon_vmask.dds"} if bake else {}
+    vloc_h = {"vmask": "../../textures/bizonHeader_vmask.dds"} if bake else {}
     ex = X.Exporter(os.path.join(MOD, "vehicles/bizonSuperZ056"), "bizonSuperZ056",
-                    {"decals": "../../textures/bizon_decals_diffuse.dds"})
+                    dict({"decals": "../../textures/bizon_decals_diffuse.dds"}, **vloc))
     info_c = ex.export([comb])
     exh = X.Exporter(os.path.join(MOD, "vehicles/bizonHeader42"), "bizonHeader42",
-                     {"decals": "../../textures/bizon_decals_diffuse.dds"})
+                     dict({"decals": "../../textures/bizon_decals_diffuse.dds"}, **vloc_h))
     info_h = exh.export([head])
+    if bake:
+        import time
+        t0 = time.time()
+        os.makedirs(os.path.join(OUT, "textures"), exist_ok=True)
+        V.bake_vmask(vm_c, int(os.environ.get("BIZON_VMASK", "2048")), os.path.join(OUT, "textures", "bizon_vmask.png"))
+        V.bake_vmask(vm_h, 1024, os.path.join(OUT, "textures", "bizonHeader_vmask.png"))
+        print("VMASK baked in %.0f s" % (time.time() - t0))
     json.dump({"combine": info_c, "header": info_h, "anim": anim}, open(os.path.join(OUT, "nodes.json"), "w"),
               indent=1, default=list)
     print("EXPORT combine shapes=%d tris=%d mats=%d | header shapes=%d tris=%d" % (
