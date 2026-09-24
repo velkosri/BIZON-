@@ -280,7 +280,9 @@ def combine_xml():
                     <fillUnit unitTextOverride="$l10n_unit_literShort" fillTypeCategories="combine" capacity="3200">
                         <exactFillRootNode node="{m('exactFillRootNode')}"/>
                     </fillUnit>
-                    <fillUnit unitTextOverride="$l10n_unit_literShort" showOnHud="false" showInShop="false" fillTypes="diesel" capacity="180"/>
+                    <fillUnit unitTextOverride="$l10n_unit_literShort" showOnHud="false" showInShop="false" fillTypes="diesel" capacity="180">
+                        <exactFillRootNode node="{m('exactFillRootNodeFuel')}"/>
+                    </fillUnit>
                 </fillUnits>
             </fillUnitConfiguration>
         </fillUnitConfigurations>
