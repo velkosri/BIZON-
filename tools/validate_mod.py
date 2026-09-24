@@ -76,6 +76,11 @@ def main(zpath):
                         checks += 1
                         if ln not in maps:
                             errors.append("%s: sound linkNode '%s' has no i3dMapping" % (snd.get("filename"), ln))
+                    fn = el.get("file")
+                    if fn and not fn.startswith("$data"):
+                        checks += 1
+                        if fn not in names:
+                            errors.append("%s: missing sound file %s" % (snd.get("filename"), fn))
         for r in refs:
             checks += 1
             if r not in names:

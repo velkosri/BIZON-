@@ -13,6 +13,7 @@ from mathutils import Euler, Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(__file__))
 import blender_kit as K  # noqa: E402
+import bizon_detail as D  # noqa: E402
 from blender_kit import box, cyl, empty, hose, pulley, sweep, tube, decal, belt, rivets, gear, poly_prism  # noqa
 
 TEX = os.environ.get("BIZON_TEX", "build/textures")
@@ -68,6 +69,12 @@ def materials():
     M("mirror", (0.8, 0.8, 0.8), 0.02, 1.0, detail="chrome")
     M("grain", (0.85, 0.66, 0.30), 0.8, detail="plastic")
     M("inv", (0.5, 0.5, 0.5), 0.5, detail="paint")  # non-rendered helpers
+    M("rimPaint", (0.80, 0.76, 0.64), 0.45, detail="paintOld", grime=0.4)
+    M("steelDirty", (0.35, 0.34, 0.32), 0.5, 0.8, detail="scratched")
+    M("bottleGlass", (0.36, 0.16, 0.04), 0.03, alpha=0.8, fs="glass")
+    M("beerLiquid", (0.75, 0.45, 0.08), 0.05, alpha=0.9, fs="glass")
+    M("goldFoil", (0.86, 0.68, 0.30), 0.25, 1.0, detail="silver")
+    M("goldCap", (0.80, 0.62, 0.26), 0.3, 1.0, detail="silver")
 
 
 def helper_mesh(name, size, loc, parent, kind, props=None):
@@ -133,37 +140,13 @@ def build_wheels(base):
         ak = empty("axisBack" + side, (sx * REAR_X, -WHEELBASE, R_R + SUSP_F), w)
         empty("wheelBack" + side, (0, 0, 0), ak)
         # render-only tires/rims (the game loads its own tire library models)
-        render_wheel("rw_front" + side, (sx * FRONT_X, 0, R_F), R_F, 0.48, 0.3302, sx)
-        render_wheel("rw_back" + side, (sx * REAR_X, -WHEELBASE, R_R), R_R, 0.44, 0.3048, sx)
+        # render-only tyres/rims; in game the FS25 tyre library model for the same size is used
+        D.wheel("rw_front" + side, (sx * FRONT_X, 0, R_F), R_F, 0.48, 0.3302, sx, lug_h=0.052, n_lugs=22,
+                size_txt="18.4-26")
+        D.wheel("rw_back" + side, (sx * REAR_X, -WHEELBASE, R_R), R_R, 0.44, 0.3048, sx, lug_h=0.035, n_lugs=24,
+                lug_angle=30, size_txt="16.9-24")
     return w
 
-
-def render_wheel(name, loc, r, width, rim_r, sx):
-    e = empty(name, loc, None, props={"export": False})
-    t = tube(name + "_tire", r - 0.02, rim_r, width * 0.92, (0, 0, 0), "tire", e, verts=64)
-    t["export"] = False
-    t2 = cyl(name + "_tireRound", r - 0.025, width, (0, 0, 0), "tire", e, verts=64, cap=False)
-    t2["export"] = False
-    # tread lugs (chevrons)
-    n = 26
-    for i in range(n):
-        a = 2 * math.pi * i / n
-        for side in (-1, 1):
-            lug = box(name + "_lug%d_%d" % (i, side), (width * 0.46, 0.07, 0.05),
-                      (side * width * 0.24, math.cos(a) * (r - 0.02), math.sin(a) * (r - 0.02)), "tire", e,
-                      bevel=0.01, rot=(a + math.pi / 2, 0, side * 0.45))
-            lug["export"] = False
-    rim = cyl(name + "_rim", rim_r, width * 0.8, (0, 0, 0), "cream", e, verts=48)
-    rim["export"] = False
-    disc = cyl(name + "_disc", rim_r * 0.75, 0.03, (sx * width * 0.25, 0, 0), "cream", e, verts=40)
-    disc["export"] = False
-    hub = cyl(name + "_hub", 0.12, 0.2, (sx * width * 0.3, 0, 0), "metalDark", e, verts=20)
-    hub["export"] = False
-    for i in range(8):
-        a = 2 * math.pi * i / 8
-        nut = cyl(name + "_nut%d" % i, 0.018, 0.06, (sx * width * 0.28, math.cos(a) * 0.16, math.sin(a) * 0.16),
-                  "steel", e, verts=6)
-        nut["export"] = False
 
 
 def build_frame(p):
@@ -273,8 +256,6 @@ def build_grain_tank(p):
     # decals
     decal("dBizonL", (-1.182, -0.72, 3.13), (1.3, 0.325), REG["bizon"], "decals", p, "-X")
     decal("dBizonR", (1.182, -0.72, 3.13), (1.3, 0.325), REG["bizon"], "decals", p, "+X")
-    decal("dTyskieTankL", (-1.182, -1.82, 3.13), (0.66, 0.29), REG["tyskie"], "decals", p, "-X")
-    decal("dTyskieTankR", (1.182, -1.82, 3.13), (0.66, 0.29), REG["tyskie"], "decals", p, "+X")
     decal("dPlateR", (0.797, 0.12, 2.12), (0.26, 0.13), REG["plate"], "decals", p, "+X")
     decal("dSuperMidL", (-0.797, -3.75, 1.15), (0.66, 0.165), REG["super"], "decals", p, "-X")
     decal("dWarnR", (0.797, -2.0, 0.83), (0.6, 0.075), REG["stripes"], "decals", p, "+X")
@@ -291,14 +272,14 @@ def build_cab(p, base):
                ((x0, yb, zf), (x0, yb, zt)), ((x1, yb, zf), (x1, yb, zt)),
                ((x0, (yf + yb) / 2 + 0.05, zf), (x0, (yf + yb) / 2 + 0.05 + lean * 0.4, zt))]
     for i, (a, b) in enumerate(pillars):
-        sweep("cabPillar%d" % i, [a, b], 0, "black", cab, profile=[(-0.025, -0.025), (0.025, -0.025),
-                                                                     (0.025, 0.025), (-0.025, 0.025)])
+        prof = [(math.cos(t) * 0.028 * (1.25 if abs(math.cos(t)) > 0.7 else 1), math.sin(t) * 0.028)
+                for t in [2 * math.pi * k / 12 for k in range(12)]]
+        sweep("cabPillar%d" % i, [a, b], 0, "black", cab, profile=prof)
     # lower cab body (sheet metal up to window line) + door
     box("cabLowerBack", (1.44, 0.04, 0.55), (0, yb, zf + 0.28), "red", cab, bevel=0.01)
     box("cabLowerRight", (0.03, 1.1, 0.5), (x1, 0.9, zf + 0.25), "red", cab, bevel=0.01)
     box("cabDoorLower", (0.03, 0.6, 0.45), (x0, 1.12, zf + 0.25), "red", cab, bevel=0.01)
     box("cabDoorHandle", (0.03, 0.12, 0.025), (x0 - 0.03, 0.9, zf + 0.62), "chrome", cab)
-    decal("dTyskieDoor", (x0 - 0.018, 1.1, zf + 0.28), (0.36, 0.16), REG["tyskie"], "decals", cab, "-X")
     box("cabFloor", (1.44, 1.1, 0.04), (0, 0.9, zf), "tread", cab, bevel=0.005)
     # roof: cream, with overhang and rain gutter
     box("cabRoof", (1.62, 1.45, 0.1), (0, 0.98, zt + 0.05), "cream", cab, bevel=0.035, segs=3)
@@ -388,9 +369,9 @@ def build_cab(p, base):
     box("leverConsole", (0.18, 0.4, 0.3), (0.38, 0.78, zf + 0.15), "red", cab, bevel=0.02)
     for i, x in enumerate((-0.12, 0.08, 0.22)):
         box("pedal%d" % i, (0.08, 0.03, 0.14), (x, 1.3, zf + 0.12), "rubber", cab, bevel=0.01, rot=(-0.6, 0, 0))
-    # beer: a can on the dashboard and one in the door pocket
-    can(cab, "canDash", (0.28, 1.2, zf + 0.98))
-    can(cab, "canDoor", (-0.66, 1.0, zf + 0.35))
+    # beer crate on the cab floor in the left rear corner, next to the seat
+    D.beer_crate("beerCrate", (-0.51, 0.56, zf + 0.022), cab, REG, rot_z=math.pi / 2 + 0.05, full=19)
+    D.beer_bottle("beerOpen", (-0.56, 0.86, zf + 0.022), cab, REG, opened=True, rot_z=2.2)
     # radio + CB, sun-visor stickers
     box("radio", (0.2, 0.15, 0.06), (0.4, 1.25, zt - 0.1), "black", cab, bevel=0.01)
     box("radioFace", (0.18, 0.005, 0.045), (0.4, 1.325, zt - 0.1), "steel", cab, bevel=0)
@@ -417,15 +398,6 @@ LAMP_SPOTS = {
     "workLightFR2": (0.25, 1.68, 3.97),
 }
 
-
-def can(p, name, loc):
-    c = empty(name, loc, p)
-    cyl(name + "_body", 0.033, 0.155, (0, 0, 0.078), "redClean", c, axis="Z", verts=20)
-    cyl(name + "_top", 0.03, 0.01, (0, 0, 0.16), "steel", c, axis="Z", verts=20)
-    for i, a in enumerate((0, math.pi)):
-        d = decal(name + "_lbl%d" % i, (math.cos(a) * 0.0335, math.sin(a) * 0.0335, 0.08), (0.055, 0.03),
-                  REG["can"], "decals", c, "+X" if i == 0 else "-X")
-    return c
 
 
 def build_platform(p):
@@ -491,6 +463,26 @@ def build_engine(p, base):
         box("louvre%d" % i, (0.05, 0.5, 0.02), (0.88, y0 - 0.35, 2.48 + i * 0.09), "red", e, bevel=0.004,
             rot=(0, -0.5, 0))
     decal("dEngine", (0.878, y1 + 0.5, 3.05), (0.36, 0.09), REG["engine"], "decals", e, "+X")
+    # rear right cover with hinged louvred door, handle and hinges
+    box("engineSideR2", (0.03, 0.95, 0.8), (0.86, y1 + 0.55, 2.8), "red", e, bevel=0.01)
+    for i in range(6):
+        box("louvreR2_%d" % i, (0.04, 0.7, 0.018), (0.885, y1 + 0.6, 2.55 + i * 0.075), "red", e, bevel=0.004,
+            rot=(0, -0.5, 0))
+    box("engineDoorHandle", (0.04, 0.12, 0.03), (0.89, y1 + 0.2, 2.95), "metalDark", e, bevel=0.006)
+    for z in (2.5, 3.1):
+        cyl("engineHinge%.1f" % z, 0.014, 0.08, (0.885, y1 + 1.02, z), "metalDark", e, axis="Z", verts=10)
+    # expanded-metal style top grille between the roof sections (air in for the radiator)
+    gy0, gy1 = y0 - 0.5, y1 + 0.45
+    for i in range(24):
+        x = -0.8 + i * (1.6 / 23)
+        box("topGrillX%d" % i, (0.01, gy0 - gy1, 0.025), (x, (gy0 + gy1) / 2, 3.3), "metalDark", e, bevel=0)
+    for i in range(12):
+        y = gy1 + i * ((gy0 - gy1) / 11)
+        box("topGrillY%d" % i, (1.64, 0.01, 0.02), (0, y, 3.315), "metalDark", e, bevel=0)
+    # left: shroud around the rotating screen
+    tube("screenShroud", 0.5, 0.45, 0.12, (-0.84, -3.1, 2.82), "red", e, axis="X", verts=56)
+    box("engineSideL_F", (0.03, 0.3, 0.8), (-0.86, y0 - 0.17, 2.8), "red", e, bevel=0.01)
+    box("engineSideL_R", (0.03, 0.35, 0.8), (-0.86, y1 + 0.2, 2.8), "red", e, bevel=0.01)
     # engine block
     blk = empty("engineBlock", (0.05, -3.1, 2.75), e)
     box("block", (0.5, 1.05, 0.5), (0, 0, 0), "engineGrey", blk, bevel=0.03)
@@ -770,32 +762,12 @@ def build_electrics(p):
 
 def build_extras(p):
     x = empty("extras", (0, 0, 0), p)
-    # beer crate strapped on the right platform, 20 bottles, one opened on top
-    cr = empty("beerCrate", (0.96, 0.42, 2.18), x)
-    box("crateBase", (0.3, 0.4, 0.02), (0, 0, 0.01), "crateRed", cr, bevel=0.004)
-    for sx in (-1, 1):
-        box("crateSideX%d" % sx, (0.015, 0.4, 0.28), (sx * 0.143, 0, 0.14), "crateRed", cr, bevel=0.004)
-        box("crateSideY%d" % sx, (0.3, 0.015, 0.28), (0, sx * 0.193, 0.14), "crateRed", cr, bevel=0.004)
-        box("crateHandle%d" % sx, (0.12, 0.02, 0.03), (0, sx * 0.2, 0.24), "crateRed", cr, bevel=0.008)
-    decal("dCrateR", (0.152, 0, 0.13), (0.38, 0.1), REG["crate"], "decals", cr, "+X")
-    decal("dCrateF", (0, 0.202, 0.13), (0.28, 0.07), REG["crate"], "decals", cr, "+Y")
-    for i in range(4):
-        box("crateDivX%d" % i, (0.28, 0.006, 0.18), (0, -0.15 + i * 0.1, 0.1), "crateRed", cr, bevel=0)
-    for ix in range(4):
-        for iy in range(5):
-            if (ix, iy) == (3, 4):
-                continue
-            bottle(cr, "bt%d%d" % (ix, iy), (-0.105 + ix * 0.07, -0.16 + iy * 0.08, 0.02))
-    bottle(cr, "btOpen", (0.05, 0.15, 0.29), opened=True)
-    sweep("crateStrap", [(0.8, 0.2, 2.18), (0.8, 0.2, 2.47), (1.12, 0.2, 2.47), (1.12, 0.2, 2.2)], 0, "yellow", x,
-          profile=[(-0.02, -0.002), (0.02, -0.002), (0.02, 0.002), (-0.02, 0.002)])
     # cooler box on the engine deck (left rear) with sticker
     cb = empty("coolerBox", (-0.45, -3.72, 2.4), x)
     box("coolerBody", (0.45, 0.3, 0.32), (0, 0, 0.16), "cream", cb, bevel=0.03, segs=3)
     box("coolerLid", (0.47, 0.32, 0.06), (0, 0, 0.34), "redClean", cb, bevel=0.02)
     sweep("coolerHandle", [(-0.2, 0, 0.37), (-0.2, 0, 0.45), (0.2, 0, 0.45), (0.2, 0, 0.37)], 0.01, "plasticBlack",
           cb, verts=6)
-    decal("dCooler", (0, -0.152, 0.17), (0.3, 0.13), REG["tyskie"], "decals", cb, "-Y")
     # wooden block + chain (for towing), shovel on the side (every Bizon has one)
     box("woodBlock", (0.2, 0.3, 0.12), (0.65, -3.75, 2.46), "wood", x, bevel=0.01)
     sh = empty("shovel", (-0.82, -3.7, 1.3), x)
@@ -809,16 +781,6 @@ def build_extras(p):
     o = cyl("beaconDome_r", 0.07, 0.14, (0, 0, 0.09), "amberGlass", bc, axis="Z", r2=0.04)
     o["export"] = False
 
-
-def bottle(p, name, loc, opened=False):
-    b = empty(name, loc, p)
-    cyl(name + "_body", 0.03, 0.17, (0, 0, 0.085), "brownGlass", b, axis="Z", verts=14)
-    cyl(name + "_shoulder", 0.03, 0.05, (0, 0, 0.195), "brownGlass", b, axis="Z", verts=14, r2=0.013)
-    cyl(name + "_neck", 0.013, 0.06, (0, 0, 0.25), "brownGlass", b, axis="Z", verts=10)
-    if not opened:
-        cyl(name + "_cap", 0.0145, 0.012, (0, 0, 0.285), "gold", b, axis="Z", verts=10)
-    decal(name + "_lbl", (0.0305, 0, 0.09), (0.05, 0.05), REG["bottle"], "decals", b, "+X")
-    return b
 
 
 def feeder_point(t, s, z_off=0.0):
@@ -1115,10 +1077,12 @@ def build_header():
     for i in range(nb):
         a = 2 * math.pi * i / nb
         c = (math.cos(a) * 0.55, math.sin(a) * 0.55)
-        cyl("reelBat%d" % i, 0.03, 2 * half - 0.2, (0, c[0], c[1]), "cream", reel, axis="X", verts=10)
-        for j in range(int((2 * half - 0.3) / 0.15)):
-            x = -half + 0.2 + j * 0.15
-            cyl("reelTine%d_%d" % (i, j), 0.004, 0.24, (x, c[0], c[1] - 0.12), "steel", reel, axis="Z", verts=4)
+        cyl("reelBat%d" % i, 0.022, 2 * half - 0.2, (0, c[0], c[1]), "galv", reel, axis="X", verts=12)
+        for j in range(int((2 * half - 0.3) / 0.1)):
+            x = -half + 0.2 + j * 0.1
+            tine = [(x, c[0], c[1]), (x, c[0] * 0.98, c[1] - 0.03), (x + 0.01, c[0] * 0.9, c[1] - 0.2),
+                    (x + 0.01, c[0] * 0.84, c[1] - 0.26)]
+            sweep("reelTine%d_%d" % (i, j), tine, 0.0035, "plasticBlack" if j % 2 else "steel", reel, verts=5)
         for sx in (-1, 0, 1):
             sweep("reelSpoke%d_%d" % (i, sx), [(sx * (half - 0.25), 0, 0), (sx * (half - 0.25), c[0], c[1])], 0.018,
                   "red", reel, verts=8)
@@ -1177,62 +1141,8 @@ def setup_render_scene(res=(1920, 1080)):
     sc.view_settings.view_transform = "AgX"
     sc.view_settings.look = "AgX - Punchy"
     sc.view_settings.exposure = -0.55
-    world = bpy.data.worlds.new("sky")
-    sc.world = world
-    world.use_nodes = True
-    nt = world.node_tree
-    sky = nt.nodes.new("ShaderNodeTexSky")
-    sky.sky_type = "NISHITA"
-    sky.sun_elevation = math.radians(28)
-    sky.sun_rotation = math.radians(215)
-    sky.air_density = 1.2
-    sky.dust_density = 2.5
-    nt.links.new(sky.outputs["Color"], nt.nodes["Background"].inputs["Color"])
-    nt.nodes["Background"].inputs["Strength"].default_value = 0.28
-    sun = bpy.data.lights.new("sun", "SUN")
-    sun.energy = 2.8
-    sun.angle = math.radians(1.5)
-    sun.color = (1.0, 0.93, 0.82)
-    so = bpy.data.objects.new("sun", sun)
-    sc.collection.objects.link(so)
-    so.rotation_euler = (math.radians(58), 0, math.radians(215))
-    # stubble field ground
-    bpy.ops.mesh.primitive_plane_add(size=200, location=(0, 0, 0))
-    g = bpy.context.active_object
-    g.name = "ground"
-    g["export"] = False
-    m = bpy.data.materials.new("field")
-    m.use_nodes = True
-    n = m.node_tree
-    b = n.nodes["Principled BSDF"]
-    noise = n.nodes.new("ShaderNodeTexNoise")
-    tcw = n.nodes.new("ShaderNodeTexCoord")
-    n.links.new(tcw.outputs["Object"], noise.inputs["Vector"])
-    noise.inputs["Scale"].default_value = 1.4
-    noise.inputs["Detail"].default_value = 12
-    # stubble rows along the driving direction
-    wave = n.nodes.new("ShaderNodeTexWave")
-    n.links.new(tcw.outputs["Object"], wave.inputs["Vector"])
-    wave.wave_type = "BANDS"
-    wave.bands_direction = "X"
-    wave.inputs["Scale"].default_value = 2.2
-    wave.inputs["Distortion"].default_value = 1.2
-    wave.inputs["Detail"].default_value = 4
-    mixf = n.nodes.new("ShaderNodeMath")
-    mixf.operation = "MULTIPLY"
-    n.links.new(noise.outputs["Fac"], mixf.inputs[0])
-    n.links.new(wave.outputs["Fac"], mixf.inputs[1])
-    ramp = n.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.09, 0.065, 0.03, 1)
-    ramp.color_ramp.elements[1].color = (0.36, 0.27, 0.12, 1)
-    n.links.new(mixf.outputs[0], ramp.inputs["Fac"])
-    n.links.new(ramp.outputs["Color"], b.inputs["Base Color"])
-    b.inputs["Roughness"].default_value = 0.95
-    bump = n.nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.4
-    n.links.new(noise.outputs["Fac"], bump.inputs["Height"])
-    n.links.new(bump.outputs["Normal"], b.inputs["Normal"])
-    g.data.materials.append(m)
+    D.field_scene()
+    D.apply_render_look()
     # grain heap in the tank (render only, seen through the top grid)
     import bmesh
     bm = bmesh.new()
