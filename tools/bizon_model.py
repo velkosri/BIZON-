@@ -13,6 +13,7 @@ from mathutils import Euler, Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(__file__))
 import blender_kit as K  # noqa: E402
+import bizon_body as BB  # noqa: E402
 import bizon_detail as D  # noqa: E402
 import bizon_engine as EN  # noqa: E402
 from blender_kit import box, cyl, empty, hose, pulley, sweep, tube, decal, belt, rivets, gear, poly_prism  # noqa
@@ -124,15 +125,11 @@ def build_combine():
     body = empty("body", (0, 0, 0), shake_body)
     build_frame(body)
     build_axles(body, base)
-    build_housing(body)
-    build_grain_tank(body)
+    # engine + its exhaust/PTO shake on their own mounts; body panels only get the light body shake
+    shake_engine = shaker(vis, "engineShake", axis="X", r=0.0035, loc=tuple(BB.ENGINE))
+    BB.build(body, shake_engine, ANIM, REG)
     build_cab(body, base)
     build_platform(body)
-    shake_engine = shaker(vis, "engineShake", axis="X", r=0.0035, loc=(0, -3.1, 2.8))
-    build_engine(shake_engine, base)
-    build_rear(body, base)
-    build_left_drives(body, base)
-    build_right_side(body)
     build_electrics(body)
     build_extras(body)
     build_feeder(base)
@@ -167,7 +164,6 @@ def build_wheels(base):
     return w
 
 
-
 def build_frame(p):
     # longitudinal frame rails under the housing
     for sx in (-1, 1):
@@ -182,7 +178,7 @@ def build_axles(p, base):
     for sx in (-1, 1):
         cyl("finalDrive%d" % sx, 0.24, 0.22, (sx * 0.98, 0, R_F), "red", p, verts=32, bevel=0.01)
         cyl("finalDriveCover%d" % sx, 0.2, 0.04, (sx * 1.1, 0, R_F), "metalDark", p, verts=32)
-        box("finalDriveTop%d" % sx, (0.2, 0.36, 0.4), (sx * 0.98, 0.0, R_F + 0.3), "red", p, bevel=0.03)
+        box("finalDriveTop%d" % sx, (0.2, 0.36, 0.26), (sx * 0.98, 0.0, R_F + 0.23), "red", p, bevel=0.03)
         cyl("brakeDrum%d" % sx, 0.14, 0.1, (sx * 0.8, 0, R_F), "metalDark", p, verts=24)
     box("gearbox", (0.55, 0.45, 0.42), (0, 0.02, R_F + 0.05), "red", p, bevel=0.03)
     box("gearboxCover", (0.4, 0.3, 0.05), (0, 0.02, R_F + 0.28), "metalDark", p, bevel=0.01)
@@ -200,84 +196,6 @@ def build_axles(p, base):
     cyl("steerCylinderRod", 0.02, 0.35, (-0.02, ry + 0.05, R_R + 0.15), "chrome", p, axis="X", verts=12)
     hose("steerHose1", (-0.62, ry + 0.05, R_R + 0.17), (-0.5, ry + 0.9, 1.2), 0.1, 0.012, "hoseBlack", p)
     hose("steerHose2", (-0.1, ry + 0.05, R_R + 0.17), (-0.45, ry + 0.9, 1.25), 0.1, 0.012, "hoseBlack", p)
-
-
-def side_panel(name, x, y0, y1, z0, z1, p, sx, mat="red", ribs=4):
-    t = 0.03
-    box(name, (t, y0 - y1, z1 - z0), (x, (y0 + y1) / 2, (z0 + z1) / 2), mat, p, bevel=0.008)
-    for i in range(ribs):
-        y = y1 + (y0 - y1) * (i + 0.5) / ribs
-        box(name + "_rib%d" % i, (0.025, 0.04, z1 - z0 - 0.06), (x + sx * 0.025, y, (z0 + z1) / 2), mat, p,
-            bevel=0.006)
-    rivets(name + "_rivT", (x + sx * 0.02, y0 - 0.03, z1 - 0.03), (x + sx * 0.02, y1 + 0.03, z1 - 0.03),
-           max(3, int((y0 - y1) / 0.12)), "red", p)
-    rivets(name + "_rivB", (x + sx * 0.02, y0 - 0.03, z0 + 0.03), (x + sx * 0.02, y1 + 0.03, z0 + 0.03),
-           max(3, int((y0 - y1) / 0.12)), "red", p)
-
-
-def build_housing(p):
-    # threshing/cleaning housing: side walls, top deck, front face, underside sieve box
-    for sx in (-1, 1):
-        x = sx * 0.78
-        side_panel("housingSideFront%d" % sx, x, 0.45, -1.3, 0.62, 2.35, p, sx, ribs=4)
-        side_panel("housingSideMid%d" % sx, x, -1.33, -2.8, 0.62, 2.35, p, sx, ribs=3)
-        side_panel("housingSideRear%d" % sx, x, -2.83, -4.1, 0.9, 2.35, p, sx, ribs=3)
-        # inspection door with handles and hinges
-        box("inspDoor%d" % sx, (0.02, 0.62, 0.5), (x + sx * 0.03, -2.0, 1.25), "red", p, bevel=0.01)
-        box("inspDoorHandle%d" % sx, (0.03, 0.14, 0.025), (x + sx * 0.05, -1.8, 1.25), "metalDark", p)
-        for z in (1.05, 1.45):
-            cyl("inspHinge%d_%.2f" % (sx, z), 0.012, 0.06, (x + sx * 0.045, -2.31, z), "metalDark", p, axis="Z")
-    box("housingTop", (1.62, 4.5, 0.04), (0, -1.8, 2.35), "red", p, bevel=0.01)
-    box("housingFront", (1.56, 0.04, 0.9), (0, 0.46, 1.9), "red", p, bevel=0.01)
-    box("sieveBox", (1.4, 2.6, 0.22), (0, -2.0, 0.52), "red", p, bevel=0.02)
-    box("sieveBoxLip", (1.3, 0.05, 0.1), (0, -3.28, 0.47), "metalDark", p)
-    # bottom augers (clean grain + returns) along X under the housing
-    for i, y in enumerate((-0.55, -0.95)):
-        cyl("bottomAuger%d" % i, 0.11, 1.62, (0, y, 0.52), "red", p, axis="X", verts=24)
-        cyl("bottomAugerBearing%d" % i, 0.06, 1.72, (0, y, 0.52), "metalDark", p, axis="X", verts=12)
-    # drum cover bulge
-    cyl("drumCover", 0.36, 1.58, (0, 0.05, 1.3), "red", p, axis="X", verts=36)
-    # stone trap
-    box("stoneTrap", (1.2, 0.3, 0.2), (0, 0.25, 0.72), "metalDark", p, bevel=0.01)
-
-
-def build_grain_tank(p):
-    # trapezoid cross-section tank, 3.2 m3
-    y0, y1 = 0.32, -2.25
-    prof = [(-0.8, 2.37), (0.8, 2.37), (1.14, 2.85), (1.14, 3.46), (-1.14, 3.46), (-1.14, 2.85)]
-    prof_yz = [(y, z) for (x, z) in prof for y in ()]  # noqa: F841 (placeholder, not used)
-    # build as XZ polygon extruded along Y
-    o = poly_prism("grainTank", prof, y0 - y1, "red", p, plane="XZ", offset=y1, bevel=0.012)
-    # top rim + reinforcement bands
-    for sx in (-1, 1):
-        box("tankRim%d" % sx, (0.06, y0 - y1 + 0.04, 0.06), (sx * 1.15, (y0 + y1) / 2, 3.47), "red", p, bevel=0.01)
-        for i, y in enumerate((-0.2, -0.95, -1.7)):
-            box("tankBand%d_%d" % (sx, i), (0.035, 0.05, 0.6), (sx * 1.155, y, 3.15), "red", p, bevel=0.006)
-    for y in (y0 + 0.02, y1 - 0.02):
-        box("tankRimF%.2f" % y, (2.36, 0.06, 0.06), (0, y, 3.47), "red", p, bevel=0.01)
-    # top grid cover (galvanized mesh bars)
-    for i in range(12):
-        x = -1.05 + i * (2.1 / 11)
-        box("tankGridX%d" % i, (0.012, y0 - y1 - 0.1, 0.02), (x, (y0 + y1) / 2, 3.49), "galv", p, bevel=0)
-    for i in range(9):
-        y = y1 + 0.1 + i * ((y0 - y1 - 0.2) / 8)
-        box("tankGridY%d" % i, (2.2, 0.012, 0.02), (0, y, 3.5), "galv", p, bevel=0)
-    # inspection window on the front (seen from the cab)
-    box("tankWindowFrame", (0.5, 0.03, 0.3), (0.35, y0 + 0.012, 3.12), "metalDark", p, bevel=0.01)
-    box("tankWindow", (0.42, 0.02, 0.22), (0.35, y0 + 0.02, 3.12), "glass", p, bevel=0.005)
-    # filling auger (visible through the grid, spins while threshing)
-    fa = empty("tankFillAuger", (0.35, -0.4, 3.25), p)
-    ANIM.setdefault("thresh_rot", []).append(("tankFillAuger", "Y", -420))
-    cyl("tankFillAugerShaft", 0.03, 1.4, (0, 0, 0), "steel", fa, axis="Y", verts=10)
-    for i in range(14):
-        box("tankFillFlight%d" % i, (0.24, 0.012, 0.05), (0, -0.65 + i * 0.1, 0), "galv", fa, bevel=0,
-            rot=(0, i * 0.9, 0))
-    # decals
-    decal("dBizonL", (-1.182, -0.72, 3.13), (1.3, 0.325), REG["bizon"], "decals", p, "-X")
-    decal("dBizonR", (1.182, -0.72, 3.13), (1.3, 0.325), REG["bizon"], "decals", p, "+X")
-    decal("dPlateR", (0.797, 0.12, 2.12), (0.26, 0.13), REG["plate"], "decals", p, "+X")
-    decal("dSuperMidL", (-0.797, -3.75, 1.15), (0.66, 0.165), REG["super"], "decals", p, "-X")
-    decal("dWarnR", (0.797, -2.0, 0.83), (0.6, 0.075), REG["stripes"], "decals", p, "+X")
 
 
 def build_cab(p, base):
@@ -460,7 +378,6 @@ LAMP_SPOTS = {
 BEACON_SPOT = (-0.35, 0.62, 3.984)
 
 
-
 def build_platform(p):
     zf = 2.18
     box("platform", (2.4, 1.55, 0.05), (0, 0.85, zf - 0.03), "tread", p, bevel=0.008)
@@ -507,272 +424,10 @@ def build_platform(p):
     box("extBracket", (0.02, 0.16, 0.05), (0, -0.06, 0.3), "black", ex)
 
 
-def build_engine(p, base):
-    """Engine bay behind the tank: SW-400 block, air filter, radiator + rotating screen (left)."""
-    e = empty("engineBay", (0, 0, 0), p)
-    y0, y1 = -2.28, -3.95
-    # side covers: right side louvered panel, left side open frame around radiator screen
-    box("engineDeck", (1.72, y0 - y1, 0.04), (0, (y0 + y1) / 2, 2.38), "red", e, bevel=0.01)
-    box("engineRoofF", (1.72, 0.5, 0.05), (0, y0 - 0.25, 3.3), "red", e, bevel=0.015)
-    box("engineRoofR", (1.72, 0.45, 0.05), (0, y1 + 0.23, 3.3), "red", e, bevel=0.015)
-    for sx in (-1, 1):
-        for y in (y0 - 0.02, y1 + 0.02):
-            box("enginePost%d_%.1f" % (sx, y), (0.05, 0.05, 0.92), (sx * 0.84, y, 2.84), "red", e, bevel=0.008)
-    # right side louvres
-    box("engineSideR", (0.03, 0.55, 0.8), (0.86, y0 - 0.35, 2.8), "red", e, bevel=0.008)
-    for i in range(8):
-        box("louvre%d" % i, (0.05, 0.5, 0.02), (0.88, y0 - 0.35, 2.48 + i * 0.09), "red", e, bevel=0.004,
-            rot=(0, -0.5, 0))
-    decal("dEngine", (0.878, y1 + 0.5, 3.05), (0.36, 0.09), REG["engine"], "decals", e, "+X")
-    # rear right cover with hinged louvred door, handle and hinges
-    box("engineSideR2", (0.03, 0.95, 0.8), (0.86, y1 + 0.55, 2.8), "red", e, bevel=0.01)
-    for i in range(6):
-        box("louvreR2_%d" % i, (0.04, 0.7, 0.018), (0.885, y1 + 0.6, 2.55 + i * 0.075), "red", e, bevel=0.004,
-            rot=(0, -0.5, 0))
-    box("engineDoorHandle", (0.04, 0.12, 0.03), (0.89, y1 + 0.2, 2.95), "metalDark", e, bevel=0.006)
-    for z in (2.5, 3.1):
-        cyl("engineHinge%.1f" % z, 0.014, 0.08, (0.885, y1 + 1.02, z), "metalDark", e, axis="Z", verts=10)
-    # expanded-metal style top grille between the roof sections (air in for the radiator)
-    gy0, gy1 = y0 - 0.5, y1 + 0.45
-    for i in range(24):
-        x = -0.8 + i * (1.6 / 23)
-        box("topGrillX%d" % i, (0.01, gy0 - gy1, 0.025), (x, (gy0 + gy1) / 2, 3.3), "metalDark", e, bevel=0)
-    for i in range(12):
-        y = gy1 + i * ((gy0 - gy1) / 11)
-        box("topGrillY%d" % i, (1.64, 0.01, 0.02), (0, y, 3.315), "metalDark", e, bevel=0)
-    # left: shroud around the rotating screen
-    tube("screenShroud", 0.5, 0.45, 0.12, (-0.84, -3.1, 2.82), "red", e, axis="X", verts=56)
-    box("engineSideL_F", (0.03, 0.3, 0.8), (-0.86, y0 - 0.17, 2.8), "red", e, bevel=0.01)
-    box("engineSideL_R", (0.03, 0.35, 0.8), (-0.86, y1 + 0.2, 2.8), "red", e, bevel=0.01)
-    # engine block
-    blk = empty("engineBlock", (0.05, -3.1, 2.75), e)
-    EN.build_sw400(blk, ANIM)
-    # oil-bath air cleaner above the roof, hose down to the intake manifold inlet
-    EN.build_air_filter(e, (0.45, y1 + 0.6, 3.45), (0.32, -3.1, 3.08))
-    # exhaust: vertical pipe with rain flap
-    ex = [(-0.35, -3.1, 3.0), (-0.45, -3.2, 3.2), (-0.45, -3.25, 3.4), (-0.45, -3.25, 4.05)]
-    sweep("exhaustPipe", ex, 0.055, "rust", e, verts=16)
-    cyl("muffler", 0.11, 0.6, (-0.45, -3.25, 3.55), "black", e, axis="Z", verts=24)
-    flap = empty("exhaustFlap", (-0.45, -3.19, 4.05), e)
-    cyl("exhaustFlapMesh", 0.065, 0.01, (0, -0.06, 0.005), "rust", flap, axis="Z", verts=16)
-    ANIM["exhaustFlap"] = "exhaustFlap"
-    # radiator + rotating screen drum on the left side
-    box("radiator", (0.12, 0.9, 0.78), (-0.72, -3.1, 2.8), "black", e, bevel=0.01)
-    for i in range(12):
-        box("radFin%d" % i, (0.13, 0.86, 0.01), (-0.72, -3.1, 2.44 + i * 0.065), "metalDark", e, bevel=0)
-    scr = empty("radiatorScreen", (-0.86, -3.1, 2.82), e)
-    ANIM.setdefault("motor_rot", []).append(("radiatorScreen", "X", 90))
-    tube("screenDrumRim", 0.43, 0.39, 0.1, (0, 0, 0), "red", scr, axis="X", verts=48)
-    cyl("screenMesh", 0.39, 0.02, (-0.02, 0, 0), "metalDark", scr, axis="X", verts=48)
-    for i in range(10):
-        a = i * math.pi / 5
-        box("screenBar%d" % i, (0.03, 0.8, 0.03), (-0.04, 0, 0), "red", scr, bevel=0.004, rot=(a, 0, 0))
-    for i in range(4):
-        box("screenWiper%d" % i, (0.02, 0.36, 0.05), (-0.055, math.cos(i * math.pi / 2) * 0.18,
-                                                   math.sin(i * math.pi / 2) * 0.18), "rubber", scr,
-            bevel=0.005, rot=(i * math.pi / 2 + math.pi / 2, 0, 0))
-    cyl("screenHub", 0.06, 0.08, (-0.06, 0, 0), "metalDark", scr, axis="X")
-    # radiator hoses + expansion tank
-    hose("radHoseTop", (-0.66, -2.8, 3.1), (-0.15, -2.55, 3.05), 0.05, 0.03, "hoseBlack", e)
-    hose("radHoseBot", (-0.66, -3.4, 2.5), (-0.15, -3.4, 2.5), 0.05, 0.03, "hoseBlack", e)
-    cyl("expansionTank", 0.08, 0.3, (-0.55, -2.55, 3.2), "cream", e, axis="Y", verts=20)
-    # diesel tank behind the engine (right)
-    EN.build_fuel_tank(e, (0.5, y1 - 0.05, 2.7))
-    hose("fuelLine", (0.35, y1 + 0.1, 2.5), (0.3, -3.1, 2.6), 0.08, 0.008, "hoseBlack", e)
-    return e
-
-
-def build_rear(p, base):
-    # straw walker hood sloping down to the back + walkers visible at the rear
-    y0, y1 = -4.1, -5.3
-    hood = [(y0, 2.37), (y1 + 0.2, 1.95), (y1, 1.85), (y1, 1.5), (y0, 1.5)]
-    for sx in (-1, 1):
-        poly_prism("hoodSide%d" % sx, hood, 0.03, "red", p, plane="YZ", offset=sx * 0.78 - (0.03 if sx > 0 else 0))
-    # hood roof (bent sheet)
-    box("hoodRoof", (1.6, 1.25, 0.03), (0, (y0 + y1) / 2 + 0.05, 2.14), "red", p, bevel=0.008,
-        rot=(math.atan2(0.42, 1.2), 0, 0))
-    decal("dSuperL", (-0.795, -4.62, 1.78), (0.8, 0.2), REG["super"], "decals", p, "-X")
-    decal("dSuperR", (0.795, -4.62, 1.78), (0.8, 0.2), REG["super"], "decals", p, "+X")
-    decal("dWarnL", (-0.795, -2.05, 0.83), (0.6, 0.075), REG["stripes"], "decals", p, "-X")
-    # straw curtain flaps
-    for i in range(6):
-        box("strawFlap%d" % i, (0.25, 0.01, 0.4), (-0.63 + i * 0.252, y1 - 0.02, 1.62), "rubber", p, bevel=0.003)
-    # walkers (4) sawtooth ends, shaken in two phases by counter-rotating pairs
-    wroot = empty("walkers", (0, -4.28, 1.3), p)
-    wa = empty("walkerShakeA", (0, 0, 0), wroot)
-    for ph, (off, idx) in enumerate(((0.04, (0, 2)), (-0.04, (1, 3)))):
-        wb = empty("walkerShakeB%d" % ph, (0, 0, off), wa)
-        for i in idx:
-            x = -0.57 + i * 0.38
-            EN.hollow_walker("walker%d" % i, x, wb)
-    ANIM["walkers"] = {"A": "walkerShakeA", "B": ["walkerShakeB0", "walkerShakeB1"]}
-    # chaff spreader / sieve outlet under the rear
-    for sx in (-1, 1):
-        box("chafferFrame%d" % sx, (0.03, 0.4, 0.08), (sx * 0.65, -3.45, 0.62), "galv", p, bevel=0.005)
-    for k in range(10):
-        box("chafferSlat%d" % k, (1.28, 0.035, 0.004), (0, -3.63 + k * 0.04, 0.62), "galv", p, bevel=0,
-            rot=(0.6, 0, 0))
-    # rear: tail lights, turn signals, slow vehicle triangle, number plate
-    for sx in (-1, 1):
-        tl = empty("tailLight%d" % sx, (sx * 0.72, y1 - 0.02, 1.62), p)
-        cyl("tailLightBody%d" % sx, 0.06, 0.05, (0, 0, 0), "black", tl, axis="Y")
-        cyl("tailLightGlass%d" % sx, 0.052, 0.01, (0, -0.03, 0), "redGlass", tl, axis="Y")
-        ta = empty("turnRear%d" % sx, (sx * 0.72, y1 - 0.02, 1.47), p)
-        cyl("turnRearBody%d" % sx, 0.05, 0.05, (0, 0, 0), "black", ta, axis="Y")
-        cyl("turnRearGlass%d" % sx, 0.043, 0.01, (0, -0.03, 0), "amberGlass", ta, axis="Y")
-    tri = [(-0.2, 0), (0.2, 0), (0, 0.35)]
-    poly_prism("slowSign", tri, 0.02, "orangeRefl", p, plane="XZ", offset=y1 - 0.05)
-    for o in (bpy.data.objects["slowSign"],):
-        o.location = (0, 0, 1.95)
-    innertri = [(-0.12, 0.06), (0.12, 0.06), (0, 0.26)]
-    poly_prism("slowSignInner", innertri, 0.022, "redClean", p, plane="XZ", offset=y1 - 0.052)
-    bpy.data.objects["slowSignInner"].location = (0, 0, 1.95)
-    decal("dPlateNr", (0, y1 - 0.035, 1.45), (0.34, 0.085), REG["plate_number"], "decals", p, "-Y")
-    # rear ladder to the engine deck
-    for sx in (0.55, 0.85):
-        sweep("rearLadder%.2f" % sx, [(sx, -4.05, 1.0), (sx, -4.0, 2.4)], 0.014, "yellow", p, verts=8)
-    for i in range(4):
-        sweep("rearLadderStep%d" % i, [(0.55, -4.03, 1.2 + i * 0.3), (0.85, -4.03, 1.2 + i * 0.3)], 0.012,
-              "yellow", p, verts=6)
-    # flag pole with polish flag at rear right corner of the engine deck
-    sweep("flagPole", [(0.8, -3.9, 3.3), (0.8, -3.9, 4.6)], 0.012, "steel", p, verts=8)
-    flag_mesh(p)
-
-
-def flag_mesh(p):
-    import bmesh
-    bm = bmesh.new()
-    uv = bm.loops.layers.uv.new("uv0")
-    nu, nv = 10, 5
-    w, h = 0.6, 0.38
-    vs = []
-    for j in range(nv + 1):
-        row = []
-        for i in range(nu + 1):
-            u = i / nu
-            row.append(bm.verts.new((0.8 + math.sin(u * 5.0) * 0.05 * u, -3.9 - u * w, 4.58 - h + j / nv * h)))
-        vs.append(row)
-    u0, v0, u1, v1 = REG["flag"]
-    for j in range(nv):
-        for i in range(nu):
-            f = bm.faces.new((vs[j][i], vs[j][i + 1], vs[j + 1][i + 1], vs[j + 1][i]))
-            for loop, (a, b) in zip(f.loops, ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))):
-                loop[uv].uv = (u0 + (u1 - u0) * a / nu, v0 + (v1 - v0) * b / nv)
-    o = K.mesh_from_bm("flag", bm, "decals", p, smooth_angle=80)
-    o["keep_uv"] = True
-    o["twosided"] = True
-
-
-def build_left_drives(p, base):
-    """Left side: engine -> countershaft -> drum variator, fan, walkers, sieves, elevator chains."""
-    x = -0.9
-    d = empty("leftDrives", (0, 0, 0), p)
-    parts = {
-        # name: (y, z, r, spokes)
-        "pEngineOut": (-2.55, 2.5, 0.2, 5),
-        "pCounter": (-1.35, 2.05, 0.32, 6),
-        "pCounterSmall": (-1.35, 2.05, 0.14, 4),
-        "pDrumVariator": (0.05, 1.3, 0.42, 6),
-        "pFan": (-0.45, 0.75, 0.2, 5),
-        "pWalkerCrank": (-3.05, 1.82, 0.3, 5),
-        "pSieve": (-1.9, 0.95, 0.16, 4),
-        "pBeater": (-0.6, 1.6, 0.18, 4),
-    }
-    xs = {"pEngineOut": x - 0.02, "pCounter": x, "pCounterSmall": x - 0.07, "pDrumVariator": x - 0.04,
-          "pFan": x - 0.07, "pWalkerCrank": x, "pSieve": x - 0.07, "pBeater": x}
-    speeds = {"pEngineOut": 900, "pCounter": 520, "pCounterSmall": 520, "pDrumVariator": 430, "pFan": 900,
-              "pWalkerCrank": 380, "pSieve": 700, "pBeater": 800}
-    for nm, (y, z, r, sp) in parts.items():
-        mat = "cream" if nm in ("pDrumVariator", "pCounter") else "red"
-        pulley(nm, r, 0.05, (xs[nm], y, z), mat, d, spokes=sp, axis="X")
-        ANIM.setdefault("thresh_rot" if nm != "pEngineOut" else "motor_rot", []).append((nm, "X", speeds[nm]))
-        # shaft stubs + bearing housings into the wall
-        cyl(nm + "_shaft", 0.03, abs(xs[nm] + 0.78) + 0.05, ((xs[nm] - 0.78) / 2, y, z), "steel", d, axis="X")
-        box(nm + "_bearing", (0.03, 0.14, 0.14), (-0.8, y, z), "metalDark", d, bevel=0.02)
-    # variator second half (movable disc) + adjustment spindle
-    cyl("variatorDisc2", 0.4, 0.03, (x - 0.1, 0.05, 1.3), "cream", d, axis="X", verts=48, r2=0.3)
-    sweep("variatorSpindle", [(x - 0.12, 0.05, 1.3), (x - 0.2, 0.25, 1.9), (x - 0.2, 0.9, 2.1)], 0.012, "steel",
-          d, verts=8)
-    # belts
-    belt("beltMain", x - 0.005, (-2.55, 2.5), 0.2, (-1.35, 2.05), 0.32, parent=d, w=0.022)
-    belt("beltMain2", x - 0.035, (-2.55, 2.5), 0.2, (-1.35, 2.05), 0.32, parent=d, w=0.022)
-    belt("beltDrum", x - 0.07, (-1.35, 2.05), 0.14, (0.05, 1.3), 0.3, parent=d, w=0.04)
-    belt("beltFan", x - 0.07, (-0.45, 0.75), 0.2, (-1.35, 2.05), 0.14, parent=d, w=0.03)
-    belt("beltWalker", x, (-3.05, 1.82), 0.3, (-1.35, 2.05), 0.32, parent=d, w=0.04)
-    belt("beltSieve", x - 0.07, (-1.9, 0.95), 0.16, (-3.05, 1.82), 0.12, parent=d, w=0.03)
-    # tensioner arms with springs
-    for i, (y, z, y2, z2) in enumerate(((-2.2, 2.55, -2.3, 2.1), (-0.75, 1.9, -0.85, 1.5))):
-        sweep("tensionArm%d" % i, [(x - 0.03, y2, z2), (x - 0.03, y, z)], 0.015, "metalDark", d, verts=8)
-        pulley("tensionRoller%d" % i, 0.06, 0.05, (x - 0.02, y, z), "metalDark", d, spokes=0)
-        coil = []
-        for k in range(60):
-            t = k / 59
-            a = t * 2 * math.pi * 10
-            coil.append((x - 0.03 + math.cos(a) * 0.018, y2 + (y2 - 0.3 - y2) * t * 0 - 0.05 - t * 0.3,
-                         z2 - 0.05 + math.sin(a) * 0.018))
-        sweep("tensionSpring%d" % i, coil, 0.004, "steel", d, verts=5)
-    # chain drives to the elevator / feeder (sprockets + chains)
-    for nm, y, z, r, t in (("sprElev", -0.7, 0.55, 0.1, 18), ("sprElevTop", -0.9, 3.1, 0.08, 14)):
-        s = empty(nm, (x + 0.02, y, z), d)
-        gear(nm + "_g", r, 0.02, t, (0, 0, 0), "metalDark", s)
-        ANIM.setdefault("thresh_rot", []).append((nm, "X", 500))
-    # belt guards (half-open, as on the real machine the side covers swing up)
-    box("guardTop", (0.03, 2.4, 0.03), (x - 0.2, -2.1, 2.9), "red", d, bevel=0.005)
-    sweep("guardFrame", [(x - 0.2, -3.4, 2.9), (x - 0.2, -3.4, 2.3), (-0.8, -3.4, 2.3)], 0.012, "red", d,
-          verts=6)
-    decal("dWarnBelt", (-0.797, -1.35, 2.3), (0.44, 0.11), REG["warning"], "decals", d, "-X")
-    # grease nipples
-    for i, (y, z) in enumerate(((-3.1, 2.44), (-1.35, 1.76), (0.05, 0.92), (-3.05, 1.55))):
-        cyl("grease%d" % i, 0.008, 0.03, (-0.82, y, z), "yellow", d, axis="X", verts=6)
-
-
-def build_right_side(p):
-    r = empty("rightSide", (0, 0, 0), p)
-    x = 0.86
-    # grain elevator housing up into the tank + chain cover
-    box("elevator", (0.16, 0.3, 2.55), (x, -0.62, 1.9), "red", r, bevel=0.01)
-    box("elevatorHead", (0.2, 0.42, 0.3), (x - 0.05, -0.62, 3.2), "red", r, bevel=0.02)
-    box("elevatorFoot", (0.22, 0.4, 0.25), (x, -0.62, 0.58), "red", r, bevel=0.02)
-    rivets("elevRiv", (x + 0.085, -0.5, 0.8), (x + 0.085, -0.5, 3.0), 18, "red", r, normal="+X")
-    box("returnsElevator", (0.12, 0.22, 1.6), (x, -1.02, 1.3), "red", r, bevel=0.01)
-    # hydraulic tank + valve block + hoses
-    cyl("hydTank", 0.14, 0.6, (1.0, 0.95, 1.55), "red", r, axis="Y", verts=24)
-    cyl("hydTankCap", 0.04, 0.05, (1.0, 1.05, 1.7), "black", r, axis="Z")
-    box("valveBlock", (0.18, 0.28, 0.16), (0.95, 0.35, 1.72), "metalDark", r, bevel=0.01)
-    for i in range(4):
-        cyl("valveSpool%d" % i, 0.012, 0.08, (0.95, 0.24 + i * 0.07, 1.84), "chrome", r, axis="Z", verts=8)
-    # battery box with cables
-    bb = empty("batteryBox", (1.0, 1.35, 1.72), r)
-    box("batteryCase", (0.3, 0.42, 0.28), (0, 0, 0), "black", bb, bevel=0.01)
-    box("batteryLid", (0.32, 0.44, 0.03), (0, 0, 0.155), "red", bb, bevel=0.01)
-    cyl("batteryPos", 0.018, 0.03, (-0.08, 0.12, 0.19), "copper", bb, axis="Z", verts=8)
-    cyl("batteryNeg", 0.018, 0.03, (-0.08, -0.12, 0.19), "steel", bb, axis="Z", verts=8)
-    # toolbox + spare V-belts hanging + grease gun
-    box("toolbox", (0.26, 0.5, 0.26), (1.0, -1.7, 2.0), "red", r, bevel=0.02)
-    box("toolboxLid", (0.28, 0.52, 0.03), (1.0, -1.7, 2.14), "red", r, bevel=0.01)
-    box("toolboxLatch", (0.03, 0.06, 0.04), (1.14, -1.7, 2.08), "chrome", r)
-    for i in range(2):
-        pts = [(0.93 + math.cos(a) * 0.01, -2.6 + math.sin(a) * 0.14 + i * 0.03, 2.05 - 0.2 - math.cos(a) * 0.2)
-               for a in [2 * math.pi * k / 24 for k in range(24)]]
-        sweep("spareBelt%d" % i, pts, 0.008, "rubberBelt", r, closed=True, verts=6)
-    sweep("beltHook", [(0.88, -2.6, 2.1), (0.94, -2.6, 2.1), (0.94, -2.6, 2.05)], 0.008, "steel", r, verts=6)
-    ggun = empty("greaseGun", (1.02, -1.0, 2.0), r)
-    cyl("greaseGunBody", 0.035, 0.3, (0, 0, 0), "red", ggun, axis="Y")
-    sweep("greaseGunHose", [(0, 0.15, 0), (0.02, 0.25, -0.05), (0.0, 0.3, -0.15)], 0.006, "rubber", ggun, verts=6)
-    # hydraulic hoses: valves -> feeder cylinders / pipe cylinder / header coupling
-    hose("hoseFeederL", (0.9, 0.3, 1.72), (-0.42, 0.42, 0.92), 0.35, 0.013, "hoseBlack", r)
-    hose("hoseFeederR", (0.95, 0.32, 1.72), (0.42, 0.42, 0.92), 0.25, 0.013, "hoseBlack", r)
-    hose("hoseReel1", (0.92, 0.45, 1.72), (0.62, 1.05, 1.05), 0.2, 0.011, "hoseBlack", r)
-    hose("hoseReel2", (0.97, 0.45, 1.72), (0.66, 1.05, 1.02), 0.22, 0.011, "hoseBlack", r)
-    hose("hosePipe", (0.9, 0.2, 1.72), (-1.1, 0.0, 2.8), 0.1, 0.012, "hoseBlack", r, da=(0, 0, 1),
-         db=(-1, 0, 0))
-    hose("hoseSuction", (1.0, 0.7, 1.45), (0.2, 0.1, R_F + 0.2), 0.15, 0.025, "hoseBlack", r)
-
-
 def build_electrics(p):
     e = empty("electrics", (0, 0, 0), p)
-    # battery -> starter (thick cables), battery -> fuse box (cab), fuse box -> lights, horn, rear loom
-    hose("cableStarter", (0.92, 1.47, 1.9), (0.35, -2.65, 2.55), 0.25, 0.012, "wireRed", e)
+    # platform side: battery -> fuse box -> front lamps and horn (starter, alternator and the rear loom are
+    # routed in bizon_body.wiring)
     hose("cableGround", (0.92, 1.23, 1.9), (0.75, 1.0, 1.6), 0.08, 0.012, "wireBlack", e)
     box("fuseBox", (0.04, 0.22, 0.16), (0.745, 0.6, 2.62), "black", e, bevel=0.008)
     box("fuseBoxLid", (0.01, 0.2, 0.14), (0.768, 0.6, 2.62), "plasticBlack", e, bevel=0.003)
@@ -786,22 +441,13 @@ def build_electrics(p):
         sweep("wireTurn%d" % sx, [(p[0] + 0.012 * sx, p[1], p[2]) for p in up] +
               [(sx * 0.785, 1.62, 2.9), (sx * 1.0, 1.62, 2.93), (sx * 1.15, 1.62, 2.93)], 0.005, "wireBlack", e,
               verts=6)
-    # rear loom along the right housing wall with clips
-    loom = [(0.8, 0.55, 2.3), (0.81, -0.3, 2.25), (0.81, -1.5, 2.25), (0.81, -2.8, 2.25), (0.81, -4.0, 2.0),
-            (0.75, -5.25, 1.62)]
-    sweep("rearLoom", loom, 0.009, "wireBlack", e, verts=6)
-    for i, pnt in enumerate(loom[1:-1]):
-        box("loomClip%d" % i, (0.02, 0.03, 0.03), pnt, "metalDark", e)
-    hose("wireTailL", (0.75, -5.25, 1.62), (-0.72, -5.28, 1.62), 0.05, 0.005, "wireBlack", e)
-    # horn wires + alternator
     hose("wireHorn", (0.76, 0.6, 2.7), (0.42, 0.6, 3.95), 0.05, 0.004, "wireRed", e)
-    hose("wireAlt", (0.3, -2.6, 2.87), (0.8, -2.2, 2.35), 0.1, 0.006, "wireRed", e)
 
 
 def build_extras(p):
     x = empty("extras", (0, 0, 0), p)
-    # shovel on the side (every Bizon has one)
-    sh = empty("shovel", (-0.82, -3.7, 1.3), x)
+    # shovel on the left side of the straw walker hood (every Bizon has one)
+    sh = empty("shovel", (-BB.XH - 0.03, -4.7, 1.7), x)
     sweep("shovelHandle", [(0, 0.0, 0), (0, 0.9, 0.5)], 0.018, "wood", sh, verts=8)
     box("shovelBlade", (0.02, 0.24, 0.3), (0, -0.08, -0.12), "metalDark", sh, bevel=0.01, rot=(0.5, 0, 0))
     box("shovelHolder", (0.05, 0.05, 0.05), (0.02, 0.5, 0.28), "black", sh)
@@ -811,7 +457,6 @@ def build_extras(p):
     o["export"] = False
     o = cyl("beaconDome_r", 0.07, 0.14, (0, 0, 0.09), "amberGlass", bc, axis="Z", r2=0.04)
     o["export"] = False
-
 
 
 def feeder_point(t, s, z_off=0.0):
@@ -978,8 +623,9 @@ def build_functional(base):
     sl = empty("sharedLights", (0, 0, 0), f)
     for nm, loc in LAMP_SPOTS.items():
         empty(nm, loc, sl, props={"g_rot": "10 0 0"})
-    empty("workLightRearL", (-0.7, -4.05, 3.38), sl, props={"g_rot": "15 180 0"})
-    empty("workLightRearR", (0.7, -4.05, 3.38), sl, props={"g_rot": "15 180 0"})
+    # rear work lamps sit on the rear roof corners of the tall block
+    empty("workLightRearL", (-0.95, BB.YTR - 0.06, BB.ZTOP + 0.06), sl, props={"g_rot": "15 180 0"})
+    empty("workLightRearR", (0.95, BB.YTR - 0.06, BB.ZTOP + 0.06), sl, props={"g_rot": "15 180 0"})
     empty("beaconLight01", BEACON_SPOT, sl)
     # real lights (spot lights shine along local -Z in GIANTS)
     rl = empty("realLights", (0, 0, 0), f)
@@ -992,13 +638,13 @@ def build_functional(base):
     L("highBeamHigh", (0, 1.72, 3.2), "-6 180 0", "0.85 0.85 0.8", 40, 50)
     L("workLightFrontLow", (0, 1.7, 3.95), "-25 180 0", "0.85 0.85 1", 22, 120)
     L("workLightFrontHigh", (0, 1.72, 3.95), "-30 180 0", "0.85 0.85 1", 28, 100)
-    L("workLightBackLow", (0, -4.1, 3.4), "-25 0 0", "0.9 0.9 1", 15, 120)
-    L("workLightBackHigh", (0, -4.1, 3.4), "-30 0 0", "0.9 0.9 1", 18, 110)
-    L("backLightsHigh", (0, -5.35, 1.6), "-10 0 0", "0.5 0 0", 3, 130)
+    L("workLightBackLow", (0, BB.YTR - 0.1, 3.45), "-25 0 0", "0.9 0.9 1", 15, 120)
+    L("workLightBackHigh", (0, BB.YTR - 0.1, 3.45), "-30 0 0", "0.9 0.9 1", 18, 110)
+    L("backLightsHigh", (0, BB.YHR - 0.08, 2.25), "-10 0 0", "0.5 0 0", 3, 130)
     L("turnLightLeftFront", (-1.18, 1.7, 2.93), "0 180 0", "0.31 0.14 0", 4, 120)
     L("turnLightRightFront", (1.18, 1.7, 2.93), "0 180 0", "0.31 0.14 0", 4, 120)
-    L("turnLightLeftBack", (-0.72, -5.35, 1.47), "0 0 0", "0.31 0.14 0", 3, 120)
-    L("turnLightRightBack", (0.72, -5.35, 1.47), "0 0 0", "0.31 0.14 0", 3, 120)
+    L("turnLightLeftBack", (-0.62, BB.YHR - 0.08, 2.10), "0 0 0", "0.31 0.14 0", 3, 120)
+    L("turnLightRightBack", (0.62, BB.YHR - 0.08, 2.10), "0 0 0", "0.31 0.14 0", 3, 120)
     L("interiorLight", (0, 0.9, 3.75), "-90 0 0", "0.6 0.55 0.45", 2, 140)
     L("pipeLightHigh", (-1.3, -0.4, 3.6), "-60 -90 0", "0.9 0.9 1", 12, 100)
     # work areas: straw swath behind the machine, chopper wider spread
@@ -1011,12 +657,13 @@ def build_functional(base):
     empty("workAreaChopperHeight", (-2.1, -9.0, 0), wa)
     # fill volume + fill helpers
     tank = empty("tankNodes", (0, 0, 0), f)
-    fv = helper_mesh("fillVolume", (2.1, 2.45, 0.95), (0, -0.96, 2.95), tank, "fillvol")
-    helper_mesh("exactFillRootNode", (1.9, 2.2, 0.5), (0, -0.96, 3.1), tank, "exactfill")
-    helper_mesh("exactFillRootNodeFuel", (0.5, 0.45, 0.5), (0.5, -4.0, 2.7), tank, "exactfill")
+    ty = (BB.YTF + BB.YTE) / 2
+    fv = helper_mesh("fillVolume", (2.1, BB.YTF - BB.YTE - 0.12, 1.25), (0, ty, 2.72), tank, "fillvol")
+    helper_mesh("exactFillRootNode", (1.9, BB.YTF - BB.YTE - 0.25, 0.5), (0, ty, 2.95), tank, "exactfill")
+    helper_mesh("exactFillRootNodeFuel", (0.5, 0.45, 0.5), tuple(BB.FUEL_TANK), tank, "exactfill")
     empty("unloadInfo", (-1.0, 0.1, 2.5), tank)
     empty("loadInfo", (0.35, -0.4, 3.2), tank)
-    empty("exhaustParticle", (-0.45, -3.25, 4.1), f, props={"g_rot": "-90 0 0"})
+    empty("exhaustParticle", tuple(BB.EXHAUST_TIP + Vector((0, 0, 0.03))), f, props={"g_rot": "-90 0 0"})
     empty("aiCollisionNode", (0, 2.5, 1.5), f)
     empty("strawDropNode", (0, -5.35, 1.5), f)
 
@@ -1024,11 +671,14 @@ def build_functional(base):
 def build_collisions(root):
     base = root.children[0] if root.children else root
     c = empty("collisions", (0, 0, 0), bpy.data.objects["bizon_root"])
-    helper_mesh("colTank", (2.3, 2.6, 1.1), (0, -0.96, 2.92), c, "col")
+    zc = (BB.ZTB + BB.ZTOP) / 2
+    helper_mesh("colTank", (2 * BB.XT, BB.YTF - BB.YTE, BB.ZTOP - BB.ZTB), (0, (BB.YTF + BB.YTE) / 2, zc), c, "col")
     helper_mesh("colCab", (1.5, 1.3, 1.75), (0, 0.9, 3.05), c, "col")
-    helper_mesh("colEngine", (1.7, 1.7, 1.0), (0, -3.1, 2.85), c, "col")
+    helper_mesh("colEngine", (2 * BB.XT, BB.YTE - BB.YTR, BB.ZTOP - BB.ZTB), (0, (BB.YTE + BB.YTR) / 2, zc), c,
+                "col")
     helper_mesh("colPlatform", (2.4, 1.5, 0.3), (0, 0.85, 2.05), c, "col")
-    helper_mesh("colHood", (1.6, 1.3, 0.9), (0, -4.7, 1.9), c, "col")
+    helper_mesh("colHood", (2 * BB.XH, BB.YTR - BB.YHR, BB.ZHT - BB.ZH0),
+                (0, (BB.YTR + BB.YHR) / 2, (BB.ZHT + BB.ZH0) / 2), c, "col")
     helper_mesh("colFrontAxle", (2.0, 0.4, 0.5), (0, 0, R_F + 0.1), c, "col")
 
 

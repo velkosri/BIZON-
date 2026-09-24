@@ -626,7 +626,7 @@ def apply_render_look():
                 # AgX + warm HDRI desaturate the in-game red towards brown; push it back to Bizon signal red
                 lin = (0.78, 0.028, 0.02)
             paint_material(m, lin, rust={"red": 0.28, "cream": 0.4, "rimPaint": 0.35}.get(name, 0.3),
-                           dust={"black": 0.35}.get(name, 0.4), scale=0.8)
+                           dust={"black": 0.35, "red": 0.5}.get(name, 0.4), scale=0.8)
     textured_material(M["tread"], "metal_plate_diff_2k.jpg", "metal_plate_rough_2k.jpg", "metal_plate_nor_gl_2k.jpg",
                       scale=1.2, metal=0.6, dust=0.5)
     for n in ("rust",):
