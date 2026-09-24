@@ -25,6 +25,9 @@ DETAIL = {
     "leather": (DL + "nonMetallic/leather/leather1_diffuse.png", DL + "nonMetallic/leather/leather1_specular.png", DL + "nonMetallic/leather/leather1_normal.png"),
     "fabric": (DL + "nonMetallic/fabric/fabric2_diffuse.png", DL + "nonMetallic/fabric/fabric2_specular.png", DL + "nonMetallic/fabric/fabric2_normal.png"),
     "wood": (DL + "nonMetallic/wood/wood1_diffuse.png", DL + "nonMetallic/wood/wood1_specular.png", DL + "nonMetallic/wood/wood1_normal.png"),
+    # FS25 calibrated sets (as used by base-game vehicles, e.g. Claas Arion 550)
+    "calPaint": (DL + "calibrated/calibratedPaint_diffuse.png", DL + "calibrated/calibratedPaint_specular.png", DL + "calibrated/calibratedPaint_normal.png"),
+    "castIron": (DL + "metallic/clear_diffuse.png", DL + "calibrated/castIron_specular.png", DL + "calibrated/castIron_normal.png"),
 }
 
 
@@ -33,8 +36,9 @@ def srgb_to_lin(c):
 
 
 def material(key, rgb, rough=0.5, metal=0.0, detail="paint", alpha=1.0, emission=None, image=None,
-             grime=0.0, fs=None):
-    """rgb given in sRGB 0..1. fs: 'glass' | 'decal' | 'emissive' | None (vehicleShader)."""
+             grime=0.0, fs=None, params=None):
+    """rgb given in sRGB 0..1. fs: 'glass' | 'decal' | 'emissive' | None (vehicleShader).
+    params: extra vehicleShader CustomParameters (smoothnessScale, clearCoatIntensity, ...)."""
     lin = tuple(srgb_to_lin(c) for c in rgb)
     m = bpy.data.materials.new(key)
     m.use_nodes = True
@@ -61,6 +65,7 @@ def material(key, rgb, rough=0.5, metal=0.0, detail="paint", alpha=1.0, emission
     m["fs_detail"] = detail
     m["fs_color"] = list(lin)
     m["fs_alpha"] = alpha
+    m["fs_params"] = dict(params or {})
     if image:
         m["fs_image"] = image
     MATS[key] = m

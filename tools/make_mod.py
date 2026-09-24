@@ -71,7 +71,7 @@ def combine_xml():
 
     def motor(name, hp, scale, price):
         return f'''            <motorConfiguration name="{name}" hp="{hp}" price="{price}">
-                <motor torqueScale="{scale}" minRpm="800" maxRpm="2200" maxForwardSpeed="20" maxBackwardSpeed="8" brakeForce="5" lowBrakeForceScale="0.1" accelerationLimit="0.9" dampingRateScale="1.6">
+                <motor torqueScale="{scale}" minRpm="800" maxRpm="2200" maxForwardSpeed="20" maxBackwardSpeed="8" brakeForce="8" lowBrakeForceScale="0.1" accelerationLimit="0.9" dampingRateScale="1.6">
 {torque}
                 </motor>
                 <transmission minForwardGearRatio="29" maxForwardGearRatio="420" minBackwardGearRatio="74" maxBackwardGearRatio="420" name="$l10n_info_transmission_cvt"/>
@@ -265,7 +265,7 @@ def combine_xml():
     </drivable>
 
     <attacherJoints>
-        <attacherJoint jointType="cutter" node="{m('attacherJointCutter')}" lowerTransLimit="0 0 0" lowerRotLimit="0 0 15" dynamicLowerRotLimit="true" lockDownRotLimit="true" moveTime="3" comboTime="0" delayedObjectChanges="false" delayedObjectChangesOnAttach="true">
+        <attacherJoint jointType="cutter" node="{m('attacherJointCutter')}" jointPositionOffset="{f3(A['jointPosOffset'])}" lowerTransLimit="0 0 0" lowerRotLimit="0 0 15" dynamicLowerRotLimit="true" lockDownRotLimit="true" moveTime="3" comboTime="0" delayedObjectChanges="false" delayedObjectChangesOnAttach="true">
             <distanceToGround lower="{hl}" upper="{hu}"/>
             <rotationNode node="{m('attacherJointRot')}" lowerRotation="{jl}" upperRotation="{ju}" startRotation="0 0 0"/>
             <schema position="1 0" rotation="0" invertX="true"/>
@@ -682,6 +682,10 @@ def main():
     for i3d in (os.path.join(MOD, VEH_C, "bizonSuperZ056.i3d"), os.path.join(MOD, VEH_H, "bizonHeader42.i3d")):
         ET.parse(i3d)
     shutil.copy(os.path.join(BUILD, "textures", "bizon_decals_diffuse.dds"), os.path.join(MOD, "textures"))
+    for vm in ("bizon_vmask", "bizonHeader_vmask"):
+        src = os.path.join(BUILD, "textures", vm + ".png")
+        if os.path.exists(src):
+            Image.open(src).convert("RGB").save(os.path.join(MOD, "textures", vm + ".dds"), "DDS", pixel_format="DXT1")
     snd_dir = os.path.join(MOD, VEH_C, "sounds")
     os.makedirs(snd_dir, exist_ok=True)
     for fn in os.listdir(os.path.join(BUILD, "sounds")):

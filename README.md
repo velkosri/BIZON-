@@ -33,13 +33,19 @@ Kombajn:
   kluczyk, dźwignie, pedały, fotel z amortyzacją, postać kierowcy (IK na kierownicy i pedałach),
 - oświetlenie: drogowe, długie, halogeny robocze przód/tył (lampy z biblioteki gry), światło rury,
   kierunkowskazy, stop, kogut na dachu, lampka w kabinie,
+- otwarty silnik 6-cylindrowy w stylu SW-400: kadłub z płaszczami wodnymi każdego cylindra, 6 osobnych
+  głowic z pokrywami zaworów i nakrętkami, wtryskiwacze z przewodem przelewowym, pompa wtryskowa z regulatorem
+  i 6 przewodami wtryskowymi, filtry paliwa, kolektor ssący i wydechowy, miska olejowa ze śrubami, filtr oleju,
+  bagnet, obudowa koła zamachowego, rozrusznik z elektromagnesem, alternator, pompa wodna, termostat, pompa
+  hydrauliczna z przewodami, łapy silnika na poduszkach, wiązka kabli; filtr powietrza mokry z cyklonem,
+  zbiornik paliwa z opaskami, korkiem na łańcuszku i czujnikiem,
 - mechanika i elektryka na wierzchu: pasy klinowe z napinaczami i sprężynami, łańcuchy, kalamitki,
   akumulator z klemami, skrzynka bezpieczników, wiązki kabli z opaskami, przewody hydrauliczne
   od rozdzielacza do siłowników, zbiornik oleju, filtr powietrza, kolektor, pompa wtryskowa, rozrusznik,
 - w kabinie obok fotela skrzynka Tyskie (20 × 0,5 l): skrzynka z wycięciami i uchwytami, butelki
   toczone ze szkła z grubością ścianki, piwo w środku, etykieta przód/tył, etykieta na szyjce,
   folia i kapsel z karbowaniem; jedna otwarta butelka na podłodze obok skrzynki,
-- dodatki: lodówka turystyczna na silniku, flaga Polski na maszcie, trąbki, radio CB z anteną,
+- dodatki: flaga Polski na maszcie, trąbki, radio CB z anteną,
   gaśnica, łopata, klocek drewna, trójkąt pojazdu wolnobieżnego, tablica rejestracyjna, tabliczka
   znamionowa; na karoserii tylko napisy BIZON / Super Z056.
 
@@ -52,6 +58,9 @@ pasy), silnik pod obciążeniem z orzącego ciągnika, wolne obroty diesla oraz 
 Wysokość dźwięku silnika idzie za obrotami (`MOTOR_RPM_REAL`), wolne obroty przechodzą płynnie
 w pracę pod obciążeniem.
 
+Każdy pojazd ma własną, wypaloną w Blenderze teksturę `vmask` (druga mapa UV): zielony kanał to okluzja
+otoczenia (AO), czerwony to maska zużycia krawędzi, niebieski to maska brudu (więcej na dole maszyny).
+Lakier i żeliwo silnika używają materiałów „calibrated” z FS25 (jak pojazdy z gry).
 Tekstury drewna/metalu/gumy korzystają z biblioteki detali FS25 (`$data/shared/detailLibrary`),
 więc brud, zużycie i mycie działają jak w pojazdach z gry. W grze opony i felgi są modelami
 z biblioteki opon FS25 w podanym rozmiarze (tak działa każdy pojazd w FS), podobnie lampy robocze,
