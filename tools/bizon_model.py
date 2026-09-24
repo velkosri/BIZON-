@@ -41,8 +41,8 @@ def materials():
     M = K.material
     # old, sun-faded factory paint: little clear coat; values follow base-game calibrated materials
     old_paint = {"smoothnessScale": 0.7, "clearCoatIntensity": 0.15, "clearCoatSmoothness": 0.35}
-    M("red", (0.62, 0.045, 0.035), 0.42, detail="calPaint", grime=0.45, params=old_paint)
-    M("redClean", (0.66, 0.06, 0.05), 0.35, detail="calPaint", grime=0.15,
+    M("red", (0.78, 0.2, 0.1), 0.42, detail="calPaint", grime=0.45, params=old_paint)
+    M("redClean", (0.82, 0.23, 0.11), 0.35, detail="calPaint", grime=0.15,
       params={"smoothnessScale": 0.85, "clearCoatIntensity": 0.4, "clearCoatSmoothness": 0.7})
     M("cream", (0.86, 0.82, 0.70), 0.45, detail="calPaint", grime=0.4, params=old_paint)
     M("yellow", (0.93, 0.70, 0.08), 0.45, detail="calPaint", grime=0.3, params=old_paint)
@@ -77,7 +77,9 @@ def materials():
     M("mirror", (0.8, 0.8, 0.8), 0.02, 1.0, detail="chrome")
     M("grain", (0.85, 0.66, 0.30), 0.8, detail="plastic")
     M("inv", (0.5, 0.5, 0.5), 0.5, detail="paint")  # non-rendered helpers
-    M("rimPaint", (0.80, 0.76, 0.64), 0.45, detail="calPaint", grime=0.4, params=old_paint)
+    M("rimPaint", (0.6, 0.6, 0.58), 0.4, 0.3, detail="calPaint", grime=0.4, params=old_paint)
+    M("postGrey", (0.56, 0.57, 0.57), 0.45, 0.2, detail="calPaint", grime=0.3, params=old_paint)
+    M("canopyWhite", (0.9, 0.89, 0.85), 0.45, detail="calPaint", grime=0.35, params=old_paint)
     M("steelDirty", (0.35, 0.34, 0.32), 0.5, 0.8, detail="scratched")
     M("bottleGlass", (0.36, 0.16, 0.04), 0.03, alpha=0.8, fs="glass")
     M("beerLiquid", (0.75, 0.45, 0.08), 0.05, alpha=0.9, fs="glass")
@@ -279,68 +281,74 @@ def build_grain_tank(p):
 
 
 def build_cab(p, base):
+    """Open operator platform under a sun canopy on four posts (early Bizon Z050/Z056 style)."""
     cab = empty("cab", (0, 0, 0), p)
-    x0, x1 = -0.72, 0.72
-    yf, yb = 1.45, 0.35
+    yf = 1.45
     zf, zt = 2.2, 3.82
-    # frame pillars (front pillars lean forward at the top: classic Bizon cab)
-    lean = 0.18
-    pillars = [((x0, yf, zf), (x0, yf + lean, zt)), ((x1, yf, zf), (x1, yf + lean, zt)),
-               ((x0, yb, zf), (x0, yb, zt)), ((x1, yb, zf), (x1, yb, zt)),
-               ((x0, (yf + yb) / 2 + 0.05, zf), (x0, (yf + yb) / 2 + 0.05 + lean * 0.4, zt))]
-    for i, (a, b) in enumerate(pillars):
-        prof = [(math.cos(t) * 0.028 * (1.25 if abs(math.cos(t)) > 0.7 else 1), math.sin(t) * 0.028)
-                for t in [2 * math.pi * k / 12 for k in range(12)]]
-        sweep("cabPillar%d" % i, [a, b], 0, "black", cab, profile=prof)
-    # lower cab body (sheet metal up to window line) + door
-    box("cabLowerBack", (1.44, 0.04, 0.55), (0, yb, zf + 0.28), "red", cab, bevel=0.01)
-    box("cabLowerRight", (0.03, 1.1, 0.5), (x1, 0.9, zf + 0.25), "red", cab, bevel=0.01)
-    box("cabDoorLower", (0.03, 0.6, 0.45), (x0, 1.12, zf + 0.25), "red", cab, bevel=0.01)
-    box("cabDoorHandle", (0.03, 0.12, 0.025), (x0 - 0.03, 0.9, zf + 0.62), "chrome", cab)
+    xp, ypf, ypb = 0.84, 1.55, 0.42   # canopy posts (rear pair clears the grain tank front wall)
+    ztop = 3.97                        # canopy top: beacon, horns and work lamps sit on it
+    zc = ztop - 0.075                  # canopy frame centre line
     box("cabFloor", (1.44, 1.1, 0.04), (0, 0.9, zf), "tread", cab, bevel=0.005)
-    # roof: cream, with overhang and rain gutter
-    box("cabRoof", (1.62, 1.45, 0.1), (0, 0.98, zt + 0.05), "cream", cab, bevel=0.035, segs=3)
-    box("cabRoofTop", (1.4, 1.2, 0.06), (0, 0.98, zt + 0.12), "cream", cab, bevel=0.03, segs=3)
-    box("cabVisor", (1.5, 0.22, 0.03), (0, yf + lean + 0.12, zt - 0.02), "black", cab, bevel=0.01,
-        rot=(-0.25, 0, 0))
-    # glass
-    def glass(name, corners):
-        import bmesh
-        bm = bmesh.new()
-        vs = [bm.verts.new(c) for c in corners]
-        bm.faces.new(vs)
-        o = K.mesh_from_bm(name, bm, "glass", cab, smooth_angle=None)
-        o["twosided"] = True
-        return o
-    glass("glassFront", [(x0 + 0.02, yf, zf + 0.5), (x1 - 0.02, yf, zf + 0.5),
-                         (x1 - 0.02, yf + lean, zt - 0.02), (x0 + 0.02, yf + lean, zt - 0.02)])
-    glass("glassFrontLow", [(x0 + 0.02, yf, zf + 0.05), (x1 - 0.02, yf, zf + 0.05),
-                            (x1 - 0.02, yf, zf + 0.48), (x0 + 0.02, yf, zf + 0.48)])
-    glass("glassBack", [(x1 - 0.02, yb, zf + 0.58), (x0 + 0.02, yb, zf + 0.58),
-                        (x0 + 0.02, yb, zt - 0.02), (x1 - 0.02, yb, zt - 0.02)])
-    glass("glassRight", [(x1, yb + 0.02, zf + 0.52), (x1, yf - 0.02, zf + 0.52),
-                         (x1, yf + lean - 0.02, zt - 0.02), (x1, yb + 0.02, zt - 0.02)])
-    glass("glassDoor", [(x0, yf - 0.02, zf + 0.5), (x0, 0.83, zf + 0.5),
-                        (x0, 0.83 + lean * 0.4, zt - 0.02), (x0, yf + lean - 0.02, zt - 0.02)])
-    glass("glassLeftRear", [(x0, 0.8, zf + 0.5), (x0, yb + 0.02, zf + 0.5),
-                            (x0, yb + 0.02, zt - 0.02), (x0, 0.8 + lean * 0.35, zt - 0.02)])
-    # window rubber seals
-    for i, (a, b) in enumerate([((x0, yf, zf + 0.5), (x1, yf, zf + 0.5)),
-                                ((x0, yf + lean, zt - 0.03), (x1, yf + lean, zt - 0.03))]):
-        sweep("cabSeal%d" % i, [a, b], 0.012, "rubber", cab, verts=6)
-    # wipers (static)
-    for sx in (-0.3, 0.3):
-        sweep("wiper%.1f" % sx, [(sx, yf + 0.03, zf + 0.62), (sx - 0.12, yf + 0.03 + lean * 0.45, zf + 1.1)], 0.008,
-              "black", cab, verts=6)
-        cyl("wiperMotor%.1f" % sx, 0.03, 0.06, (sx, yf - 0.02, zf + 0.6), "black", cab, axis="Y")
-    # mirrors on arms
     for sx in (-1, 1):
-        a = Vector((sx * 0.74, yf + 0.05, zt - 0.3))
-        b = Vector((sx * 1.12, yf + 0.25, zt - 0.2))
-        sweep("mirrorArm%d" % sx, [a, a + Vector((sx * 0.2, 0.1, 0.05)), b], 0.012, "black", cab, verts=8)
-        box("mirrorHead%d" % sx, (0.2, 0.05, 0.3), tuple(b + Vector((0, 0, -0.1))), "black", cab, bevel=0.015)
-        box("mirrorGlass%d" % sx, (0.18, 0.012, 0.27), tuple(b + Vector((0, -0.028, -0.1))), "mirror", cab,
-            bevel=0.004)
+        for y in (ypf, ypb):
+            nm = "%d_%d" % (sx, int(y * 100))
+            sweep("canopyPost" + nm, [(sx * xp, y, zf - 0.02), (sx * xp, y, zc)], 0.028, "postGrey", cab, verts=16)
+            cyl("postFoot" + nm, 0.065, 0.014, (sx * xp, y, zf - 0.013), "postGrey", cab, axis="Z", verts=24)
+            for k in range(4):
+                a = k * math.pi / 2 + math.pi / 4
+                cyl("postBolt%s_%d" % (nm, k), 0.009, 0.014, (sx * xp + math.cos(a) * 0.045,
+                    y + math.sin(a) * 0.045, zf + 0.001), "metalDark", cab, axis="Z", verts=6, smooth=0)
+            gy = -0.07 if y > 1 else 0.07
+            poly_prism("postGusset" + nm, [(y, zc - 0.02), (y + gy * 2.2, zc - 0.02), (y, zc - 0.2)], 0.01,
+                       "postGrey", cab, plane="YZ", offset=sx * xp - 0.005)
+    # welded square-tube frame on the posts, cross members, then the white sheet with a folded hem
+    frame = [(-xp, ypb, zc), (xp, ypb, zc), (xp, ypf, zc), (-xp, ypf, zc)]
+    sq = [(-0.022, -0.022), (0.022, -0.022), (0.022, 0.022), (-0.022, 0.022)]
+    sweep("canopyFrame", frame, 0, "postGrey", cab, closed=True, profile=sq)
+    sweep("canopyCrossX", [(-xp, (ypf + ypb) / 2, zc), (xp, (ypf + ypb) / 2, zc)], 0, "postGrey", cab, profile=sq)
+    sweep("canopyCrossY", [(0, ypb, zc), (0, ypf, zc)], 0, "postGrey", cab, profile=sq)
+    cx, cy0, cy1 = 0.97, 0.06, 1.8
+    box("canopy", (2 * cx, cy1 - cy0, 0.03), (0, (cy0 + cy1) / 2, ztop - 0.015), "canopyWhite", cab, bevel=0.01)
+    for nm, size, loc in (("hemF", (2 * cx, 0.02, 0.075), (0, cy1 - 0.01, ztop - 0.04)),
+                          ("hemB", (2 * cx, 0.02, 0.075), (0, cy0 + 0.01, ztop - 0.04)),
+                          ("hemL", (0.02, cy1 - cy0, 0.075), (-cx + 0.01, (cy0 + cy1) / 2, ztop - 0.04)),
+                          ("hemR", (0.02, cy1 - cy0, 0.075), (cx - 0.01, (cy0 + cy1) / 2, ztop - 0.04))):
+        box("canopy" + nm, size, loc, "canopyWhite", cab, bevel=0.006)
+    for k in range(5):
+        box("canopyRib%d" % k, (2 * cx - 0.1, 0.03, 0.012), (0, cy0 + 0.25 + k * 0.32, ztop + 0.004), "canopyWhite",
+            cab, bevel=0.004)
+    # big round mirrors on bent arms clamped to the front posts
+    for sx in (-1, 1):
+        a = Vector((sx * xp, ypf, 3.45))
+        b = Vector((sx * (xp + 0.36), ypf + 0.12, 3.56))
+        cyl("mirrorClamp%d" % sx, 0.042, 0.07, tuple(a), "black", cab, axis="Z", verts=16)
+        sweep("mirrorArm%d" % sx, [a, a + Vector((sx * 0.16, 0.03, 0.08)), b], 0.012, "black", cab, verts=8)
+        mh = empty("mirrorHead%d" % sx, tuple(b + Vector((0, 0.01, -0.14))), cab, rot=(0, 0, sx * -0.3))
+        sweep("mirrorStem%d" % sx, [(0, 0, 0.14), (0, 0, 0.09)], 0.009, "black", mh, verts=8)
+        cyl("mirrorBack%d" % sx, 0.115, 0.04, (0, 0, 0), "black", mh, axis="Y", verts=36, bevel=0.012)
+        cyl("mirrorGlass%d" % sx, 0.104, 0.006, (0, -0.022, 0), "mirror", mh, axis="Y", verts=36)
+    # tool box (front right) and battery box (rear right) on the platform, extinguisher stays on the rail
+    tb = empty("toolBox", (0.66, 1.3, zf + 0.02), cab)
+    box("toolBoxBody", (0.42, 0.26, 0.2), (0, 0, 0.1), "red", tb, bevel=0.012)
+    box("toolBoxLid", (0.44, 0.28, 0.035), (0, 0, 0.215), "red", tb, bevel=0.01)
+    sweep("toolBoxHandle", [(-0.1, 0, 0.23), (-0.1, 0, 0.27), (0.1, 0, 0.27), (0.1, 0, 0.23)], 0.008, "metalDark",
+          tb, verts=6)
+    for sx in (-1, 1):
+        box("toolBoxLatch%d" % sx, (0.04, 0.012, 0.05), (sx * 0.15, -0.135, 0.19), "steel", tb, bevel=0.003)
+    bb = empty("batteryBox", (0.6, 0.46, zf + 0.02), cab)
+    box("batteryBoxBody", (0.36, 0.24, 0.24), (0, 0, 0.12), "canopyWhite", bb, bevel=0.012)
+    box("batteryBoxLid", (0.38, 0.26, 0.03), (0, 0, 0.255), "canopyWhite", bb, bevel=0.008)
+    for k in range(4):
+        box("batteryBoxLouvre%d" % k, (0.2, 0.004, 0.012), (0, -0.122, 0.07 + k * 0.035), "metalDark", bb, bevel=0)
+    hose("batteryCable", (0.46, 0.46, zf + 0.2), (0.3, 1.3, zf + 0.55), 0.12, 0.009, "wireRed", cab)
+    # instrument box on the grain tank front wall behind the seat (tank gauge, oil, temperature)
+    ib = empty("rearInstrumentBox", (0.42, 0.37, zf + 0.98), cab)
+    box("rearInstrBody", (0.44, 0.1, 0.22), (0, 0, 0), "black", ib, bevel=0.015)
+    for k, x in enumerate((-0.13, 0.0, 0.13)):
+        cyl("rearGauge%d" % k, 0.042, 0.008, (x, 0.052, 0.01), "black", ib, axis="Y", verts=24)
+        tube("rearGaugeBezel%d" % k, 0.048, 0.04, 0.012, (x, 0.055, 0.01), "chrome", ib, axis="Y", verts=24)
+        box("rearGaugeNeedle%d" % k, (0.003, 0.002, 0.034), (x + 0.006, 0.06, 0.018), "orangeRefl", ib, bevel=0,
+            rot=(0, 0.5 - k * 0.45, 0))
     # interior
     seat = empty("seat", (0.0, 0.62, zf), cab)
     box("seatPlate", (0.42, 0.42, 0.03), (0, 0.02, 0.02), "metalDark", seat, bevel=0.008)
@@ -421,6 +429,7 @@ def build_cab(p, base):
     D.beer_bottle("beerOpen", (-0.56, 0.86, zf + 0.022), cab, REG, opened=True, rot_z=2.2)
     # radio + CB, sun-visor stickers
     box("radio", (0.2, 0.15, 0.06), (0.4, 1.25, zt - 0.1), "black", cab, bevel=0.01)
+    box("radioBracket", (0.03, 0.03, 0.2), (0.4, 1.25, zt + 0.02), "metalDark", cab, bevel=0.003)
     # beacon mounting plate, flush on the roof top (the FS beacon model sits on it)
     box("beaconMount", (0.2, 0.2, 0.014), (BEACON_SPOT[0], BEACON_SPOT[1], zt + 0.157), "black", cab, bevel=0.004)
     box("radioFace", (0.18, 0.005, 0.045), (0.4, 1.325, zt - 0.1), "steel", cab, bevel=0)
@@ -437,7 +446,7 @@ def build_cab(p, base):
     for i, (x, ln) in enumerate(((0.35, 0.34), (0.47, 0.42))):
         cyl("horn%d" % i, 0.045, ln, (x, 0.6, zt + 0.2), "chrome", cab, axis="Y", r2=0.015, verts=20)
         box("hornBracket%d" % i, (0.03, 0.05, 0.05), (x, 0.6, zt + 0.16), "black", cab)
-    EN.cab_details(cab, zf, zt, yf, yb, x0, x1, lean)
+    EN.platform_details(cab, zf, ztop, xp, ypf, yf)
     return cab
 
 
@@ -463,22 +472,22 @@ def build_platform(p):
     # railings (yellow like the factory ones)
     rail_pts_l = [(-1.18, 0.12, zf), (-1.18, 0.12, zf + 1.0), (-1.18, 0.62, zf + 1.0)]
     rail_pts_r = [(1.18, 0.12, zf), (1.18, 0.12, zf + 1.0), (1.18, 1.58, zf + 1.0), (1.18, 1.58, zf)]
-    sweep("railL", rail_pts_l, 0.02, "yellow", p, verts=10)
-    sweep("railR", rail_pts_r, 0.02, "yellow", p, verts=10)
-    sweep("railRmid", [(1.18, 0.12, zf + 0.5), (1.18, 1.58, zf + 0.5)], 0.015, "yellow", p, verts=8)
-    sweep("railFront", [(0.75, 1.6, zf), (0.75, 1.6, zf + 1.0), (1.18, 1.58, zf + 1.0)], 0.02, "yellow", p,
+    sweep("railL", rail_pts_l, 0.02, "red", p, verts=10)
+    sweep("railR", rail_pts_r, 0.02, "red", p, verts=10)
+    sweep("railRmid", [(1.18, 0.12, zf + 0.5), (1.18, 1.58, zf + 0.5)], 0.015, "red", p, verts=8)
+    sweep("railFront", [(0.75, 1.6, zf), (0.75, 1.6, zf + 1.0), (1.18, 1.58, zf + 1.0)], 0.02, "red", p,
           verts=10)
-    sweep("railFrontL", [(-0.75, 1.6, zf), (-0.75, 1.6, zf + 1.0), (-0.95, 1.6, zf + 1.0)], 0.02, "yellow", p,
+    sweep("railFrontL", [(-0.75, 1.6, zf), (-0.75, 1.6, zf + 1.0), (-0.95, 1.6, zf + 1.0)], 0.02, "red", p,
           verts=10)
     # ladder on the left, in front of the left wheel
     lad = empty("ladder", (-1.12, 1.25, 0), p)
     for sx in (-0.2, 0.2):
-        sweep("ladderStringer%.1f" % sx, [(sx, 0.0, 0.35), (sx, 0.18, zf)], 0.018, "yellow", lad, verts=8)
+        sweep("ladderStringer%.1f" % sx, [(sx, 0.0, 0.35), (sx, 0.18, zf)], 0.018, "red", lad, verts=8)
     for i in range(6):
         z = 0.45 + i * (zf - 0.55) / 5.5
         yy = 0.18 * (z - 0.35) / (zf - 0.35)
         box("ladderStep%d" % i, (0.38, 0.12, 0.025), (0, yy, z), "tread", lad, bevel=0.004)
-    sweep("ladderGrab", [(-0.25, 0.2, zf), (-0.25, 0.25, zf + 0.9), (-0.25, 0.0, zf + 1.0)], 0.017, "yellow",
+    sweep("ladderGrab", [(-0.25, 0.2, zf), (-0.25, 0.25, zf + 0.9), (-0.25, 0.0, zf + 1.0)], 0.017, "red",
           lad, verts=8)
     # headlights on the front railing + turn signals
     for sx in (-1, 1):

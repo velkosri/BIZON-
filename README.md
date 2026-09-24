@@ -29,10 +29,13 @@ Kombajn:
   wentylator, korba wytrząsaczy, sita), zębatki podajnika i elewatora, ślimak w zbiorniku,
   wytrząsacze chodzą po okręgu w dwóch fazach jak na wale korbowym,
 - przenośnik pochyły podnoszony siłownikami (siłowniki śledzą ruch), podnoszenie/opuszczanie hedera,
-- kabina: kierownica obracana przy skręcaniu, zegary obrotów i prędkości z działającymi wskazówkami,
-  kluczyk, dźwignie, pedały, fotel z amortyzacją, postać kierowcy (IK na kierownicy i pedałach),
+- otwarte stanowisko operatora jak we wczesnych Bizonach: biały daszek na 4 słupkach z ramą i
+  zawinięciem blachy, pomarańczowe barierki, okrągłe lusterka na ramionach, skrzynka narzędziowa,
+  skrzynka akumulatora, zegary na ścianie zbiornika; kierownica obracana przy skręcaniu, zegary obrotów
+  i prędkości z działającymi wskazówkami, kluczyk, dźwignie, pedały, fotel z amortyzacją, postać
+  kierowcy (IK na kierownicy i pedałach),
 - oświetlenie: drogowe, długie, halogeny robocze przód/tył (lampy z biblioteki gry), światło rury,
-  kierunkowskazy, stop, kogut na dachu, lampka w kabinie,
+  kierunkowskazy, stop, kogut na daszku, lampka pod daszkiem,
 - otwarty silnik 6-cylindrowy w stylu SW-400: kadłub z płaszczami wodnymi każdego cylindra, 6 osobnych
   głowic z pokrywami zaworów i nakrętkami, wtryskiwacze z przewodem przelewowym, pompa wtryskowa z regulatorem
   i 6 przewodami wtryskowymi, filtry paliwa, kolektor ssący i wydechowy, miska olejowa ze śrubami, filtr oleju,
@@ -58,8 +61,6 @@ pasy), silnik pod obciążeniem z orzącego ciągnika, wolne obroty diesla oraz 
 Wysokość dźwięku silnika idzie za obrotami (`MOTOR_RPM_REAL`), wolne obroty przechodzą płynnie
 w pracę pod obciążeniem.
 
-Każdy pojazd ma własną, wypaloną w Blenderze teksturę `vmask` (druga mapa UV): zielony kanał to okluzja
-otoczenia (AO), czerwony to maska zużycia krawędzi, niebieski to maska brudu (więcej na dole maszyny).
 Lakier i żeliwo silnika używają materiałów „calibrated” z FS25 (jak pojazdy z gry).
 Tekstury drewna/metalu/gumy korzystają z biblioteki detali FS25 (`$data/shared/detailLibrary`),
 więc brud, zużycie i mycie działają jak w pojazdach z gry. W grze opony i felgi są modelami

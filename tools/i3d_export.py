@@ -103,7 +103,7 @@ class Exporter:
             x = ['    <Material name=%s materialId="%d" customShaderId="%d">' % (name, mid, self.file_id(SHARED["shader"])),
                  '      <Texture fileId="%d"/>' % self.file_id(SHARED["white"]),
                  '      <Normalmap fileId="%d"/>' % self.file_id(SHARED["normal"]),
-                 '      <Glossmap fileId="%d"/>' % self.file_id(self.local_files.get("vmask", SHARED["vmask"])),
+                 '      <Glossmap fileId="%d"/>' % self.file_id(SHARED["vmask"]),
                  '      <Custommap name="detailSpecular" fileId="%d"/>' % self.file_id(det[1]),
                  '      <Custommap name="detailNormal" fileId="%d"/>' % self.file_id(det[2]),
                  '      <Custommap name="detailDiffuse" fileId="%d"/>' % self.file_id(det[0]),
