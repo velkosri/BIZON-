@@ -61,7 +61,7 @@ if MODE != "render-only":
     print("EXPORT combine shapes=%d tris=%d mats=%d | header shapes=%d tris=%d" % (
         info_c["shapes"], info_c["tris"], info_c["materials"], info_h["shapes"], info_h["tris"]))
 
-if MODE in ("preview", "final", "render-only"):
+if MODE in ("preview", "final", "render-only", "blend"):
     final = MODE != "preview"
     import blender_kit as K
     for n in [o.name for o in bpy.data.objects if o.type == "EMPTY" and not o.get("export", True)]:
@@ -80,13 +80,13 @@ if MODE in ("preview", "final", "render-only"):
         "render_left_detail": ((-5.6, -1.3, 2.25), (-0.8, -1.45, 1.9), 28),
         "render_cab_right": ((4.6, 4.2, 4.4), (0.6, 0.6, 2.7), 34),
     }
-    for name, (loc, tgt, lens) in shots.items():
+    for name, (loc, tgt, lens) in (shots.items() if MODE != "blend" else ()):
         cam = B.add_camera("cam_" + name, loc, tgt, lens)
         sc.camera = cam
         sc.render.filepath = os.path.join(OUT, name + ".png")
         bpy.ops.render.render(write_still=True)
         print("RENDERED", sc.render.filepath)
-    if final:
+    if final and MODE != "blend":
         # store image: transparent background, no ground
         bpy.data.objects["ground"].hide_render = True
         sc.render.film_transparent = True
@@ -109,5 +109,7 @@ if MODE in ("preview", "final", "render-only"):
         sc.render.filepath = os.path.join(OUT, "store_header.png")
         bpy.ops.render.render(write_still=True)
         for o in bpy.data.objects:
-            o.hide_render = o["_hr"]
+            o.hide_render = o.get("_hr", o.hide_render)
+    if MODE == "blend":
+        sc.camera = B.add_camera("cam_view", (-10.0, 8.6, 3.5), (0.1, -0.9, 1.75), 40)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "bizonSuperZ056.blend"))
