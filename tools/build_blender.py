@@ -69,9 +69,9 @@ if MODE in ("preview", "final", "render-only", "blend"):
         if o is not None:
             K.join_children(o, render_only=True)
     sc = B.setup_render_scene((1920, 1080) if final else (960, 540))
-    sc.cycles.samples = 72 if final else 16
+    sc.cycles.samples = 40 if final else 16
     sc.cycles.use_adaptive_sampling = True
-    sc.cycles.adaptive_threshold = 0.03
+    sc.cycles.adaptive_threshold = 0.05
     sc.render.use_persistent_data = True
     B.attach_header_for_render(head, feeder_rot_deg=-6)
     shots = {
@@ -79,13 +79,23 @@ if MODE in ("preview", "final", "render-only", "blend"):
         "render_rear_right": ((9.2, -11.0, 4.2), (0, -1.9, 1.8), 42),
         "render_left_detail": ((-5.6, -1.3, 2.25), (-0.8, -1.45, 1.9), 28),
         "render_cab_right": ((4.6, 4.2, 4.4), (0.6, 0.6, 2.7), 34),
+        "render_beer_crate": ((-0.6, 1.22, 2.92), (-0.5, 0.6, 2.36), 28, 1.5),
+        "render_beer_bottle": ((-0.3, 1.28, 2.62), (-0.55, 0.84, 2.37), 42, 1.6),
+        "render_wheel": ((-3.4, 2.2, 1.05), (-1.25, 0.0, 0.68), 38),
     }
-    for name, (loc, tgt, lens) in (shots.items() if MODE != "blend" else ()):
+    only = os.environ.get("BIZON_SHOTS")
+    if only:
+        shots = {k: v for k, v in shots.items() if k in only.split(",")}
+    base_exp = sc.view_settings.exposure
+    for name, shot in (shots.items() if MODE != "blend" else ()):
+        loc, tgt, lens = shot[:3]
+        sc.view_settings.exposure = base_exp + (shot[3] if len(shot) > 3 else 0)
         cam = B.add_camera("cam_" + name, loc, tgt, lens)
         sc.camera = cam
         sc.render.filepath = os.path.join(OUT, name + ".png")
         bpy.ops.render.render(write_still=True)
         print("RENDERED", sc.render.filepath)
+    sc.view_settings.exposure = base_exp if MODE != "blend" else sc.view_settings.exposure
     if final and MODE != "blend":
         # store image: transparent background, no ground
         bpy.data.objects["ground"].hide_render = True

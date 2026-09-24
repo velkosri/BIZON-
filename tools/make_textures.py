@@ -78,13 +78,37 @@ text_center((200, 590, 824, 670), "GRONIE", fit_font(SANS_B, "GRONIE", (200, 590
             (246, 236, 214, 255))
 region("tyskie", b)
 
-# --- crate side panel (dark red plastic with embossed-looking name)
+
+def crown(dr, cx, cy, w, col, outline=None):
+    """Simple five-point royal crown."""
+    h = w * 0.55
+    pts = [(cx - w / 2, cy + h / 2), (cx - w / 2, cy - h * 0.1), (cx - w * 0.32, cy + h * 0.12),
+           (cx - w * 0.2, cy - h * 0.45), (cx - w * 0.08, cy + h * 0.05), (cx, cy - h * 0.55),
+           (cx + w * 0.08, cy + h * 0.05), (cx + w * 0.2, cy - h * 0.45), (cx + w * 0.32, cy + h * 0.12),
+           (cx + w / 2, cy - h * 0.1), (cx + w / 2, cy + h / 2)]
+    dr.polygon(pts, fill=col, outline=outline)
+    for px, py in (pts[3], pts[5], pts[7], pts[1], pts[9]):
+        r = w * 0.045
+        dr.ellipse((px - r, py - r, px + r, py + r), fill=col, outline=outline)
+    dr.rectangle((cx - w / 2, cy + h * 0.38, cx + w / 2, cy + h / 2), fill=outline or col)
+
+
+GOLD = (214, 176, 92, 255)
+GOLD_D = (150, 112, 44, 255)
+RED = (158, 16, 28, 255)
+CREAM = (244, 234, 206, 255)
+SERIF_BI = F + "/dejavu/DejaVuSerif-BoldItalic.ttf"
+if not os.path.exists(SERIF_BI):
+    SERIF_BI = SERIF_B
+
+# --- crate logo (moulded-in look, transparent background)
 b = (1024, 256, 2048, 512)
-d.rectangle(b, fill=(122, 14, 20, 255))
-for i in range(6):
-    d.rectangle((b[0] + 20 + i * 168, b[1] + 16, b[0] + 160 + i * 168, b[1] + 60), fill=(98, 10, 16, 255))
-text_center((1064, 330, 2008, 500), "TYSKIE", fit_font(SANS_B, "TYSKIE", (1064, 330, 2008, 500), 0.8),
-            (222, 186, 100, 255))
+lay = Image.new("RGBA", (1024, 256), (0, 0, 0, 0))
+ld = ImageDraw.Draw(lay)
+crown(ld, 120, 128, 150, (236, 226, 200, 255))
+f = fit_font(SERIF_BI, "Tyskie", (0, 0, 760, 230), 0.9)
+ld.text((230, 128), "Tyskie", font=f, fill=(240, 232, 214, 255), anchor="lm")
+atlas.alpha_composite(lay, (b[0], b[1]))
 region("crate", b)
 
 # --- warning stripes
@@ -153,16 +177,57 @@ text_center((1546, 900, 2038, 1020), "SW-400  105 KM",
             fit_font(SANS_B, "SW-400  105 KM", (1546, 900, 2038, 1020), 0.8), (230, 230, 220, 255))
 region("engine", b)
 
-# --- bottle label (small, round-cornered)
-b = (1024, 1024, 1536, 1280)
-lab = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
+# --- bottle front label: gold paper, red shield, crown, script-like name, ribbon
+b = (1024, 1280, 1536, 1792)
+lab = Image.new("RGBA", (512, 512), CREAM)
 ldr = ImageDraw.Draw(lab)
-ldr.rectangle((0, 0, 512, 256), fill=(206, 170, 88, 255))
-ldr.rectangle((0, 40, 512, 216), fill=(150, 16, 26, 255))
-atlas.alpha_composite(lab, (1024, 1024))
-text_center((1044, 1070, 1516, 1230), "Tyskie", fit_font(SERIF_B, "Tyskie", (1044, 1070, 1516, 1230), 0.86),
-            (236, 200, 112, 255))
+for y in range(512):  # warm paper gradient
+    c = int(8 * math.sin(y / 512 * math.pi))
+    ldr.line([(0, y), (512, y)], fill=(236 + c // 2, 222 + c // 2, 186, 255))
+ldr.rectangle((0, 0, 511, 511), outline=GOLD_D, width=10)
+ldr.rectangle((14, 14, 497, 497), outline=GOLD, width=5)
+ldr.polygon([(86, 150), (426, 150), (426, 330), (256, 420), (86, 330)], fill=RED, outline=GOLD, width=8)
+crown(ldr, 256, 92, 150, GOLD, GOLD_D)
+f = fit_font(SERIF_BI, "Tyskie", (0, 0, 380, 140), 0.95)
+ldr.text((256, 245), "Tyskie", font=f, fill=GOLD, anchor="mm", stroke_width=3, stroke_fill=(90, 10, 14, 255))
+ldr.polygon([(40, 400), (472, 400), (452, 440), (472, 480), (40, 480), (60, 440)], fill=GOLD, outline=GOLD_D)
+f = fit_font(SANS_B, "GRONIE", (0, 0, 300, 60), 0.9)
+ldr.text((256, 440), "GRONIE", font=f, fill=RED, anchor="mm")
+f = fit_font(SANS_B, "PIWO JASNE PEŁNE", (0, 0, 300, 30), 0.9)
+ldr.text((256, 360), "PIWO JASNE PEŁNE", font=f, fill=CREAM, anchor="mm")
+atlas.paste(lab, (b[0], b[1]))
 region("bottle", b)
+
+# --- bottle back label: small print
+b = (1536, 1280, 2048, 1706)
+lab = Image.new("RGBA", (512, 426), CREAM)
+ldr = ImageDraw.Draw(lab)
+ldr.rectangle((0, 0, 511, 425), outline=GOLD, width=8)
+f1 = ImageFont.truetype(SANS_B, 30)
+f2 = ImageFont.truetype(SANS_B, 22)
+lines = [("Tyskie Gronie", f1), ("Piwo jasne pełne", f2), ("alk. 5,2% obj.", f2), ("0,5 l", f1),
+         ("Butelka zwrotna", f2), ("Najlepiej spożyć przed:", f2), ("patrz kapsel", f2)]
+y = 40
+for t, fn in lines:
+    ldr.text((256, y), t, font=fn, fill=(60, 30, 20, 255), anchor="mm")
+    y += 52
+for i in range(28):  # barcode
+    x = 150 + i * 8
+    ldr.rectangle((x, 370, x + (2 if i % 3 else 5), 410), fill=(20, 20, 20, 255))
+atlas.paste(lab, (b[0], b[1]))
+region("bottle_back", b)
+
+# --- neck label
+b = (0, 1792, 768, 2048)
+lab = Image.new("RGBA", (768, 256), RED)
+ldr = ImageDraw.Draw(lab)
+ldr.rectangle((0, 0, 767, 30), fill=GOLD)
+ldr.rectangle((0, 226, 767, 255), fill=GOLD)
+crown(ldr, 120, 128, 110, GOLD, GOLD_D)
+f = fit_font(SERIF_BI, "Tyskie", (0, 0, 420, 170), 0.9)
+ldr.text((440, 128), "Tyskie", font=f, fill=GOLD, anchor="mm")
+atlas.paste(lab, (b[0], b[1]))
+region("neck", b)
 
 # --- can wrap
 b = (1536, 1024, 2048, 1280)

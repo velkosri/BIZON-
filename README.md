@@ -31,16 +31,30 @@ Kombajn:
 - mechanika i elektryka na wierzchu: pasy klinowe z napinaczami i sprężynami, łańcuchy, kalamitki,
   akumulator z klemami, skrzynka bezpieczników, wiązki kabli z opaskami, przewody hydrauliczne
   od rozdzielacza do siłowników, zbiornik oleju, filtr powietrza, kolektor, pompa wtryskowa, rozrusznik,
-- dodatki: skrzynka piwa Tyskie z butelkami przypięta pasem na podeście, puszki w kabinie,
-  lodówka turystyczna na silniku, flaga Polski na maszcie, trąbki, radio CB z anteną, gaśnica,
-  łopata, klocek drewna, trójkąt pojazdu wolnobieżnego, tablica rejestracyjna, tabliczka znamionowa.
+- w kabinie obok fotela skrzynka Tyskie (20 × 0,5 l): skrzynka z wycięciami i uchwytami, butelki
+  toczone ze szkła z grubością ścianki, piwo w środku, etykieta przód/tył, etykieta na szyjce,
+  folia i kapsel z karbowaniem; jedna otwarta butelka przy kierownicy,
+- dodatki: lodówka turystyczna na silniku, flaga Polski na maszcie, trąbki, radio CB z anteną,
+  gaśnica, łopata, klocek drewna, trójkąt pojazdu wolnobieżnego, tablica rejestracyjna, tabliczka
+  znamionowa; na karoserii tylko napisy BIZON / Super Z056.
 
 Heder 4,2 m: nagarniacz z palcami, ślimak ze zwojami i palcami, kosa z ruchem posuwisto-zwrotnym,
 napęd pasowy z boku, siłowniki nagarniacza, płozy, pasy ostrzegawcze.
 
+Dźwięki to **prawdziwe nagrania** (CC0, BigSoundBank / Joseph Sardin), pocięte i zapętlone przez
+`tools/make_sounds.py`: wycie młocarni z przejazdu kombajnu z bliska (bęben, wytrząsacze, sita,
+pasy), silnik pod obciążeniem z orzącego ciągnika, wolne obroty diesla oraz rozruch i gaszenie.
+Wysokość dźwięku silnika idzie za obrotami (`MOTOR_RPM_REAL`), wolne obroty przechodzą płynnie
+w pracę pod obciążeniem.
+
 Tekstury drewna/metalu/gumy korzystają z biblioteki detali FS25 (`$data/shared/detailLibrary`),
-więc brud, zużycie i mycie działają jak w pojazdach z gry. Opony, felgi, lampy robocze, kogut,
-dym i dźwięki (silnik z pliku `.gls` z gry, szablony dźwięków) są ładowane z plików gry.
+więc brud, zużycie i mycie działają jak w pojazdach z gry. W grze opony i felgi są modelami
+z biblioteki opon FS25 w podanym rozmiarze (tak działa każdy pojazd w FS), podobnie lampy robocze,
+kogut i dym. Opony rolnicze na renderach (bieżnik jodełkowy R-1, napisy na boku, felgi z otworami
+i szpilkami) to osobny model tylko do renderu.
+
+Rendery: Blender Cycles, HDRI „Harvest” oraz tekstury lakieru z rdzą, blachy ryflowanej i gleby
+z Poly Haven (CC0), ściernisko z włosów Cycles. Te tekstury są tylko w renderach, nie w modzie.
 
 ## Uczciwie: czego nie dało się sprawdzić
 

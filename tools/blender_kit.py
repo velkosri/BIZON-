@@ -154,7 +154,9 @@ def box(name, size, loc, mat, parent=None, bevel=0.01, rot=(0, 0, 0), segs=2, pr
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.scale(bm, vec=Vector(size), verts=bm.verts)
     if bevel > 0:
-        bmesh.ops.bevel(bm, geom=bm.edges[:] + bm.verts[:], offset=min(bevel, min(size) * 0.45), segments=segs,
+        # sheet-metal look: never razor sharp, folded edges scale with the part
+        off = min(max(bevel, min(0.03, min(size) * 0.22)), min(size) * 0.45)
+        bmesh.ops.bevel(bm, geom=bm.edges[:] + bm.verts[:], offset=off, segments=max(segs, 3),
                         affect="EDGES", profile=0.5)
     _bm_transform(bm, (0, 0, 0), rot)
     return mesh_from_bm(name, bm, mat, parent, loc, props=props)
@@ -279,7 +281,8 @@ def poly_prism(name, pts2d, depth, mat, parent=None, plane="YZ", offset=0.0, bev
     bmesh.ops.translate(bm, vec=Vector(d), verts=v2)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     if bevel > 0:
-        bmesh.ops.bevel(bm, geom=bm.edges[:], offset=bevel, segments=1, affect="EDGES", clamp_overlap=True)
+        bmesh.ops.bevel(bm, geom=bm.edges[:], offset=bevel, segments=3, affect="EDGES", clamp_overlap=True,
+                        profile=0.5)
     return mesh_from_bm(name, bm, mat, parent, props=props)
 
 

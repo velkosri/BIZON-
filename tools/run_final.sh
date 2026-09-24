@@ -6,6 +6,7 @@ BLENDER=${BLENDER:-blender}
 PY=${PY:-python3}
 mkdir -p "$OUT"
 $PY tools/make_textures.py "$OUT/textures"
+$PY tools/make_sounds.py "$OUT/sounds"
 BIZON_TEX="$OUT/textures" "$BLENDER" -b --python-exit-code 1 -P tools/build_blender.py -- "$OUT" final > "$OUT/blender.log" 2>&1
 $PY tools/make_mod.py "$OUT"
 $PY tools/validate_mod.py "$OUT/FS25_BizonSuperZ056.zip"

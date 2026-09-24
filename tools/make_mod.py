@@ -394,11 +394,47 @@ __MAPPINGS__
     return xml.replace("__MAPPINGS__", m.xml())
 
 
-SOUNDS_COMBINE = '''<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+SOUNDS_COMBINE_T = '''<?xml version="1.0" encoding="utf-8" standalone="no" ?>
 <sounds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://validation.gdn.giants-software.com/xml/fs25/vehicle_sounds.xsd">
     <motorized>
         <sounds>
-            <motor template="engineLarge" file="$data/vehicles/johnDeere/seriesS7/sounds/seriesX9.gls" volumeScale="1.5" pitchScale="0.82" linkNodeOffset="0 2.8 -3.1"/>
+            <motorStart file="SND/bizon_motor_start.ogg" innerRadius="5" outerRadius="90" loops="1" linkNodeOffset="0 2.8 -3.1">
+                <volume indoor="0.7" outdoor="1.4"/>
+            </motorStart>
+            <motorStop file="SND/bizon_motor_stop.ogg" innerRadius="5" outerRadius="90" loops="1" linkNodeOffset="0 2.8 -3.1">
+                <volume indoor="0.6" outdoor="1.2"/>
+            </motorStop>
+            <!-- idle layer: steady diesel idle, fades out as the revs come up -->
+            <motor file="SND/bizon_engine_idle_loop.ogg" innerRadius="5" outerRadius="80" linkNodeOffset="0 2.8 -3.1">
+                <volume indoor="0.6" outdoor="1.2">
+                    <modifier type="MOTOR_RPM_REAL" value="800" modifiedValue="1.0"/>
+                    <modifier type="MOTOR_RPM_REAL" value="1300" modifiedValue="0.55"/>
+                    <modifier type="MOTOR_RPM_REAL" value="1800" modifiedValue="0.15"/>
+                    <modifier type="MOTOR_RPM_REAL" value="2200" modifiedValue="0.05"/>
+                </volume>
+                <pitch indoor="1" outdoor="1">
+                    <modifier type="MOTOR_RPM_REAL" value="800" modifiedValue="0.95"/>
+                    <modifier type="MOTOR_RPM_REAL" value="2200" modifiedValue="1.9"/>
+                </pitch>
+                <lowpassGain indoor="0.5" outdoor="1.0"/>
+            </motor>
+            <!-- working engine: old diesel under load, pitch follows the revs -->
+            <motor file="SND/bizon_engine_load_loop.ogg" innerRadius="6" outerRadius="120" linkNodeOffset="0 2.8 -3.1">
+                <volume indoor="0.8" outdoor="1.6">
+                    <modifier type="MOTOR_RPM_REAL" value="800" modifiedValue="0.25"/>
+                    <modifier type="MOTOR_RPM_REAL" value="1300" modifiedValue="0.6"/>
+                    <modifier type="MOTOR_RPM_REAL" value="1800" modifiedValue="0.9"/>
+                    <modifier type="MOTOR_RPM_REAL" value="2200" modifiedValue="1.0"/>
+                    <modifier type="MOTOR_LOAD" value="0.0" modifiedValue="0.8"/>
+                    <modifier type="MOTOR_LOAD" value="1.0" modifiedValue="1.15"/>
+                </volume>
+                <pitch indoor="1" outdoor="1">
+                    <modifier type="MOTOR_RPM_REAL" value="800" modifiedValue="0.58"/>
+                    <modifier type="MOTOR_RPM_REAL" value="1500" modifiedValue="0.82"/>
+                    <modifier type="MOTOR_RPM_REAL" value="2200" modifiedValue="1.08"/>
+                </pitch>
+                <lowpassGain indoor="0.45" outdoor="1.0"/>
+            </motor>
             <motor template="indoorCabinRumble" linkNodeOffset="-0.5 3.0 0.9" pitchScale="0.8"/>
             <motor template="indoorCabinRumble" linkNodeOffset="0.5 3.0 0.9" pitchScale="0.95"/>
             <motor template="transmissionHarvester01" pitchScale="0.85" volumeScale="0.9" linkNodeOffset="0 0.9 0"/>
@@ -431,7 +467,11 @@ SOUNDS_COMBINE = '''<?xml version="1.0" encoding="utf-8" standalone="no" ?>
     <turnOnVehicle>
         <sounds>
             <start template="combineThreshingSystemStart" volumeScale="0.4"/>
-            <work template="combineThreshingSystemLoop" volumeScale="0.4"/>
+            <!-- real recording of a combine threshing: drum whine, walkers, sieves and belts -->
+            <work file="SND/bizon_threshing_loop.ogg" innerRadius="6" outerRadius="140" linkNodeOffset="0 2.0 -1.5">
+                <volume indoor="0.7" outdoor="1.5"/>
+                <lowpassGain indoor="0.5" outdoor="1.0"/>
+            </work>
             <stop template="combineThreshingSystemStop" volumeScale="0.4"/>
         </sounds>
     </turnOnVehicle>
@@ -440,6 +480,8 @@ SOUNDS_COMBINE = '''<?xml version="1.0" encoding="utf-8" standalone="no" ?>
     </honk>
 </sounds>
 '''
+
+SOUNDS_COMBINE = SOUNDS_COMBINE_T.replace("SND/", VEH_C + "/sounds/")
 
 
 # ------------------------------------------------------------------ header
@@ -546,7 +588,8 @@ DESC_PL = """Legendarny Bizon Super Z056 z Płocka - stary, ale jary.
 - wytrząsacze, sita, sito obrotowe chłodnicy, pasy i koła pasowe w ruchu
 - trzęsienie silnika i maszyny po odpaleniu, wytrząsacze chodzą przy młóceniu
 - kabina z zegarami, kogut, halogeny, trąbki, gaśnica, łopata
-- skrzynka Tyskie na podeście, lodówka na silniku, flaga na maszcie
+- w kabinie skrzynka Tyskie z butelkami (szkło, etykiety, kapsle)
+- prawdziwe nagrania: rozruch i praca diesla, wycie młocarni (CC0, BigSoundBank)
 - heder zbożowy 4,2 m: nagarniacz, ślimak, kosa w ruchu
 
 Mod fanowski, nieoficjalny. Logotypy marek to własne napisy, nie oryginalne znaki."""
@@ -637,6 +680,10 @@ def main():
     for i3d in (os.path.join(MOD, VEH_C, "bizonSuperZ056.i3d"), os.path.join(MOD, VEH_H, "bizonHeader42.i3d")):
         ET.parse(i3d)
     shutil.copy(os.path.join(BUILD, "textures", "bizon_decals_diffuse.dds"), os.path.join(MOD, "textures"))
+    snd_dir = os.path.join(MOD, VEH_C, "sounds")
+    os.makedirs(snd_dir, exist_ok=True)
+    for fn in os.listdir(os.path.join(BUILD, "sounds")):
+        shutil.copy(os.path.join(BUILD, "sounds", fn), snd_dir)
     sc = os.path.join(BUILD, "store_combine.png")
     sh = os.path.join(BUILD, "store_header.png")
     if not os.path.exists(sc):  # preview builds have no store renders
