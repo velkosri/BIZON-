@@ -91,6 +91,7 @@ if MODE in ("preview", "final", "render-only", "blend"):
         "render_front_left": ((-10.0, 8.6, 3.5), (0.1, -0.9, 1.75), 40),
         "render_rear_right": ((9.2, -11.0, 4.2), (0, -1.9, 1.8), 42, 0.55),
         "render_left_detail": ((-5.6, -1.3, 2.25), (-0.8, -1.45, 1.9), 28),
+        "render_engine_bay": ((-4.3, -4.6, 4.4), (-0.7, -1.85, 2.55), 30, 0.3),
         "render_cab_right": ((4.6, 4.2, 4.4), (0.6, 0.6, 2.7), 34, 0.6),
         "render_beer_crate": ((-0.6, 1.22, 2.92), (-0.5, 0.6, 2.36), 28, 1.5),
         "render_beer_bottle": ((-0.3, 1.28, 2.62), (-0.55, 0.84, 2.37), 42, 1.6),
@@ -117,7 +118,8 @@ if MODE in ("preview", "final", "render-only", "blend"):
         sc.render.film_transparent = True
         sc.render.resolution_x = sc.render.resolution_y = 768
         sc.cycles.samples = int(os.environ.get("BIZON_STORE_SAMPLES", "48"))
-        cam = B.add_camera("cam_store", (-10.5, 10.5, 5.0), (0.3, -0.4, 1.6), 40)
+        # more side-on than 45 deg so the vertical unloading tube does not cover the BIZON lettering
+        cam = B.add_camera("cam_store", (-12.5, 8.5, 4.8), (0.3, -0.4, 1.6), 40)
         sc.camera = cam
         fit_camera(cam)
         sc.render.filepath = os.path.join(OUT, "store_combine.png")

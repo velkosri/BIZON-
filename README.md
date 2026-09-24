@@ -8,7 +8,8 @@ co robi Blender MCP) i wyeksportowany do natywnego formatu GIANTS (`.i3d` + bina
 | | |
 |---|---|
 | ![Tył](dist/render_rear_right.png) | ![Napędy lewej strony](dist/render_left_detail.png) |
-| ![Koło](dist/render_wheel.png) | ![Skrzynka Tyskie w kabinie](dist/render_beer_crate.png) |
+| ![Komora silnika: żaluzje, siatki, tłumik, filtr powietrza](dist/render_engine_bay.png) | ![Koło](dist/render_wheel.png) |
+| ![Stanowisko i przód zbiornika](dist/render_cab_right.png) | ![Skrzynka Tyskie w kabinie](dist/render_beer_crate.png) |
 
 ## Instalacja
 
@@ -21,13 +22,26 @@ co robi Blender MCP) i wyeksportowany do natywnego formatu GIANTS (`.i3d` + bina
 ## Co jest w środku
 
 Kombajn:
+- bryła według zdjęć prawdziwych Z056 Super (1987–89): wysoki blok nad przednią osią (z przodu zbiornik
+  ziarna z wziernikiem i kratą na dachu, za nim poprzecznie ustawiony silnik), nawis zbiornika na skośnym
+  lejku nad wąskim korpusem młocarni, niższa osłona wytrząsaczy z tyłu, rura złożona wzdłuż lewego boku,
+- blacha jak w prawdziwej maszynie, nie klocki: każdy duży panel to cienki arkusz z lekkim falowaniem
+  i wgnieceniami, gięte zaokrąglone krawędzie, kątowniki na narożach, listwy łączeń, przetłoczenia
+  usztywniające, rzędy zamalowanych śrub z podkładkami, drzwiczki rewizyjne z uszczelką, zawiasami i zamkiem,
+- komora silnika: z lewej żaluzje i dwie siatki (silnik widać przez siatkę), między nimi łożysko wału
+  napędu głównego; z prawej chłodnica z obrotowym sitem i nieruchomą ssawką; na dachu siatka nad silnikiem,
+  poziomy tłumik na obejmach z rurą i klapką oraz mokry filtr powietrza,
 - silnik SW-400 105 KM, w konfiguracji opcjonalnie SW-680 150 KM; napęd na przód, skrętna tylna oś,
 - zbiornik 3200 l, rura wyładowcza rozkładana animacją z siłownikiem hydraulicznym, efekt zboża z rury,
 - **po odpaleniu**: trzęsie się silnik i cała maszyna (drgania od pracy silnika), kręci się sito obrotowe
-  chłodnicy, koła pasowe alternatora/wentylatora, czarny dym z wydechu,
-- **przy młóceniu**: kręcą się wszystkie koła pasowe po lewej stronie (wariator bębna, wał pośredni,
-  wentylator, korba wytrząsaczy, sita), zębatki podajnika i elewatora, ślimak w zbiorniku,
+  chłodnicy, wentylator, dwurowkowe koło napędu głównego, koła pasowe alternatora, czarny dym z wydechu,
+- **przy młóceniu**: kręcą się wszystkie koła pasowe po lewej stronie (wariator bębna z drugą tarczą,
+  wał pośredni, wentylator, korba wytrząsaczy, sita), zębatki łańcucha podnośników, ślimak w zbiorniku,
   wytrząsacze chodzą po okręgu w dwóch fazach jak na wale korbowym,
+- napędy na wierzchu: pasy z silnika do wału pośredniego pod osłoną z siatki, osłony półokrągłe nad
+  wariatorem i kołem silnika, napinacze na sprężynach, łożyska kołnierzowe z kalamitkami; po prawej
+  podnośnik ziarna skręcany z dwóch połówek, podnośnik niedomłotów, zbiornik oleju hydraulicznego ze
+  wskaźnikiem, rozdzielacz, drabinka na dach silnika z poręczami,
 - przenośnik pochyły podnoszony siłownikami (siłowniki śledzą ruch), podnoszenie/opuszczanie hedera,
 - otwarte stanowisko operatora jak we wczesnych Bizonach: biały daszek na 4 słupkach z ramą i
   zawinięciem blachy, pomarańczowe barierki, okrągłe lusterka na ramionach, skrzynka narzędziowa,
@@ -42,9 +56,10 @@ Kombajn:
   bagnet, obudowa koła zamachowego, rozrusznik z elektromagnesem, alternator, pompa wodna, termostat, pompa
   hydrauliczna z przewodami, łapy silnika na poduszkach, wiązka kabli; filtr powietrza mokry z cyklonem,
   zbiornik paliwa z opaskami, korkiem na łańcuszku i czujnikiem,
-- mechanika i elektryka na wierzchu: pasy klinowe z napinaczami i sprężynami, łańcuchy, kalamitki,
-  akumulator z klemami, skrzynka bezpieczników, wiązki kabli z opaskami, przewody hydrauliczne
-  od rozdzielacza do siłowników, zbiornik oleju, filtr powietrza, kolektor, pompa wtryskowa, rozrusznik,
+- przewody na wierzchu: główna wiązka z opaskami od akumulatora pod nawisem zbiornika do tylnych lamp, kabel
+  rozrusznika, przewód alternatora, lampy robocze tylne, wiązka czujników i linka gazu po dachu zbiornika do
+  zegarów, linka obrotomierza od wariatora, węże hydrauliczne do siłownika rury, hederu i przenośnika,
+  przewody paliwa (zasilanie i przelew), akumulator z klemami, skrzynka bezpieczników,
 - w kabinie obok fotela skrzynka Tyskie (20 × 0,5 l): skrzynka z wycięciami i uchwytami, butelki
   toczone ze szkła z grubością ścianki, piwo w środku, etykieta przód/tył, etykieta na szyjce,
   folia i kapsel z karbowaniem; jedna otwarta butelka na podłodze obok skrzynki,
@@ -70,6 +85,9 @@ i szpilkami) to osobny model tylko do renderu.
 
 Rendery: Blender Cycles, HDRI „Harvest” oraz tekstury lakieru z rdzą, blachy ryflowanej i gleby
 z Poly Haven (CC0), ściernisko z włosów Cycles. Te tekstury są tylko w renderach, nie w modzie.
+
+Bryła kombajnu jest odtworzona na podstawie zdjęć prawdziwych Z056 Super z Wikimedia Commons (autorzy PabloEM,
+Jakub Hałun, Aw58; CC BY-SA 4.0). Zdjęcia służyły tylko jako wzór, nie ma ich w modzie ani w repozytorium.
 
 ## Uczciwie: czego nie dało się sprawdzić
 
