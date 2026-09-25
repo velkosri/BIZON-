@@ -1250,6 +1250,10 @@ def unloading_pipe(root):
     lamp.boxp(p1 - d * 0.35 + Vector((-0.05, -0.05, 0.12)), p1 - d * 0.35 + Vector((0.05, 0.05, 0.2)), bevel=0.01)
     lamp.done('pipe_lamp', 'paint_black')
     node('dischargeNode', p1 + Vector((0, 0.045, -0.38)), pn)
+    tr = Mesh()
+    sp = p1 + Vector((0, 0.045, -0.38))
+    tr.boxp((sp.x - 0.9, sp.y - 0.9, 0.4), (sp.x + 0.9, sp.y + 0.9, sp.z - 0.1))
+    tr.done('pipeUnloadingTrigger', 'dark', smooth=0, col='trigger')
     CTX['parent'] = root
     # swing cylinder
     c = Mesh()
@@ -1560,7 +1564,8 @@ def build_header():
     node('cutAreaHeight', (hw - 0.02, yk + 0.45, 0.1), root)
     node('groundReferenceNode', (0.0, yk + 0.3, 0.05), root)
     m = Mesh()
-    m.boxp((-hw - 0.05, yk - 0.1, 0.08), (hw + 0.05, yb + 0.05, 1.12))
+    # kept clear of the ground so the lowered header does not drag the combine
+    m.boxp((-hw - 0.05, yk - 0.1, 0.32), (hw + 0.05, yb + 0.05, 1.12))
     m.done('header_col_main', 'dark', smooth=0, col='main')
     m = Mesh()
     m.boxp((-hw, rc.y - 0.55, rc.z - 0.55), (hw, rc.y + 0.55, rc.z + 0.55))

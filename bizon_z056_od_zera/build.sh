@@ -8,7 +8,7 @@ SAMPLES=${1:-160}
 B=../build/z056
 mkdir -p $B/tex $B/dump $B/sounds $B/img dist
 python3 src/textures.py $B/tex
-python3 src/make_sounds.py $B/sounds
+python3 src/real_sounds.py $B/snd_src $B/sounds
 $BLENDER -b --factory-startup --python src/model.py -- $B/tex $B/bizon.blend
 $BLENDER -b $B/bizon.blend --python src/export_scene.py -- $B/dump
 for v in store_combine store_header; do
