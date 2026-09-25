@@ -60,7 +60,9 @@ technicznych (SW-400 100 KM, zbiornik 30 hl, heder 4,2 m, 5 wytrząsaczy, 21 km/
   pokos albo sieczkarnia,
 - światła drogowe, długie, robocze przód/tył, lampa rury, stop, kierunkowskazy,
 - kamera zewnętrzna i w kabinie, postać kierowcy z rękami na kierownicy,
-- dźwięki: rozruch, praca silnika (wysokość za obrotami), gaszenie, młocarnia.
+- dźwięki z prawdziwych nagrań (CC0, BigSoundBank / Joseph Sardin): buczenie i wycie młocarni
+  z przejazdu kombajnu (z rozpędzaniem i wybiegiem bębna), diesel pod obciążeniem i na wolnych
+  obrotach, rozruch i gaszenie; wysokość dźwięku idzie za obrotami.
 
 ## Jak to jest zbudowane
 
@@ -71,7 +73,7 @@ technicznych (SW-400 100 KM, zbiornik 30 hl, heder 4,2 m, 5 wytrząsaczy, 21 km/
 - `src/model.py` + `src/kit.py` — cały model w Blenderze (bpy/bmesh, to samo API co Blender MCP),
 - `src/export_scene.py` → `src/build_i3d.py` — eksport do `.i3d` i binarnego `.i3d.shapes`
   (wersja 10, jak w FS25) z gotowymi („precooked”) bryłami kolizji,
-- `src/make_sounds.py` — syntezowane dźwięki starego diesla i młocarni,
+- `src/real_sounds.py` — pobiera nagrania CC0 i tnie je na płynne pętle,
 - `src/make_mod.py` — XML pojazdów, modDesc, DDS z mipmapami, ikony, walidacja, zip,
 - `tools/test_shapes_roundtrip.py <plik z gry>.i3d.shapes` — test zapisu.
 
@@ -82,11 +84,13 @@ Sprawdzone tutaj: zapisywarka `.i3d.shapes` odtwarza bajt w bajt oryginalny plik
 moda przechodzą walidację (XML, odwołania do węzłów, pliki, niezależny czytnik
 `.i3d.shapes`). Ścieżki XML są wzięte z kodu FS25 v1.15 (GDN).
 
-Nie sprawdzone: nie mam tu Windowsa ani FS25, więc mod **nie był uruchomiony w grze**.
-Jeśli coś nie zadziała, wklej linie z `Dokumenty\My Games\FarmingSimulator2025\log.txt`
-z nazwą `FS25_Bizon_Z056_Super` — poprawię. Ograniczenia: materiały używają domyślnego
-shadera (tekstury z brudem są „wpieczone”, gra nie dokłada własnego zabrudzenia),
-dźwięki są syntezowane, a rendery to Blender Cycles (w grze inne światło).
+W grze: wersja 1.0.0 wczytała się w FS25 bez błędów (log od użytkownika). Wersja 1.0.1 poprawia
+ostrzeżenia z tego logu: brak dyferencjału (silnik nie napędzał kół, stąd W nie jechało),
+typ opon, zegary, `distanceToGround` złącza hedera, trigger rury; do tego zawieszenie pod
+nacisk kół i wyżej kolizja hedera (nie szoruje o ziemię). Wersja 1.0.1 nie była jeszcze
+uruchomiona w grze — jeśli coś nie zadziała, wklej linie z `log.txt` z nazwą
+`FS25_Bizon_Z056_Super`. Ograniczenia: domyślny shader (brud „wpieczony” w tekstury),
+rendery to Blender Cycles (w grze inne światło).
 
 Mod fanowski, do użytku prywatnego. Napisy „Bizon”, „FMŻ” i „Tyskie” to własne
 liternictwo, nie oryginalne logotypy.

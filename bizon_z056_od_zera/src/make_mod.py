@@ -82,13 +82,17 @@ def mappings_xml(maps, used):
     return '\n'.join(out)
 
 
-def sound(tag, f, offset, inner=3, outer=70, vol=1.0, indoor=0.6, extra='', pitch=None, fade=''):
-    s = '<%s file="sounds/%s" linkNodeOffset="%s" innerRadius="%g" outerRadius="%g" volumeScale="%g"%s%s>' % (
-        tag, f, offset, inner, outer, vol, (' ' + fade) if fade else '', (' ' + extra) if extra else '')
-    s += '<volume indoor="%g" outdoor="1"/>' % indoor
-    if pitch:
-        s += '<pitch indoor="1" outdoor="1">%s</pitch>' % ''.join(
-            '<modifier type="%s" value="%g" modifiedValue="%g"/>' % p for p in pitch)
+def mods(lst):
+    return ''.join('<modifier type="MOTOR_RPM_REAL" value="%g" modifiedValue="%g"/>' % p for p in lst or [])
+
+
+def sound(tag, f, offset, inner=3, outer=70, vol=1.0, indoor=0.6, loops=0, fade='', vmods=None, pmods=None):
+    # loops="0" = endless; without it a sample plays once and goes silent
+    s = '<%s file="sounds/%s" linkNodeOffset="%s" innerRadius="%g" outerRadius="%g" volumeScale="%g" loops="%d"%s>' % (
+        tag, f, offset, inner, outer, vol, loops, (' ' + fade) if fade else '')
+    s += '<volume indoor="%g" outdoor="1">%s</volume>' % (indoor, mods(vmods))
+    if pmods:
+        s += '<pitch indoor="1" outdoor="1">%s</pitch>' % mods(pmods)
     return s + '</%s>' % tag
 
 
@@ -144,13 +148,13 @@ def U(name):
 wheel_xml = []
 for nm, left, fr in (('wheelFL', True, True), ('wheelFR', False, True), ('wheelRL', True, False), ('wheelRR', False, False)):
     if fr:
-        phys = ('<physics repr="%s" driveNode="%s_drive" radius="0.745" width="0.47" mass="0.38" restLoad="3.1" '
-                'suspTravel="0.06" initialCompression="45" spring="220" damper="50" forcePointRatio="0.35" driveMode="2" '
-                'rotSpeed="0" brakeFactor="1" frictionScale="1.15" tireType="studded"/>') % (U(nm), nm)
+        phys = ('<physics repr="%s" driveNode="%s_drive" radius="0.745" width="0.47" mass="0.38" restLoad="3.0" '
+                'suspTravel="0.08" initialCompression="40" spring="92" damper="37" forcePointRatio="0.35" '
+                'rotSpeed="0" brakeFactor="1" frictionScale="1.2" tireType="mud"/>') % (U(nm), nm)
     else:
-        phys = ('<physics repr="%s" driveNode="%s_drive" radius="0.43" width="0.26" mass="0.12" restLoad="1.0" '
-                'suspTravel="0.06" initialCompression="45" spring="90" damper="22" forcePointRatio="0.3" driveMode="0" '
-                'rotSpeed="1" brakeFactor="0" frictionScale="1.0" tireType="studded"/>') % (U(nm), nm)
+        phys = ('<physics repr="%s" driveNode="%s_drive" radius="0.43" width="0.26" mass="0.12" restLoad="0.9" '
+                'suspTravel="0.08" initialCompression="40" spring="28" damper="11" forcePointRatio="0.3" '
+                'rotSpeed="1" brakeFactor="0" frictionScale="1.0" tireType="mud"/>') % (U(nm), nm)
     U(nm + '_drive')
     wheel_xml.append('<wheel isLeft="%s" hasTireTracks="true" hasParticles="true">%s</wheel>' % (
         'true' if left else 'false', phys))
@@ -160,7 +164,8 @@ for n in ('steeringWheel', 'outdoorCamera', 'outdoorCameraTarget', 'indoorCamera
           'enterReferenceNode', 'frontLightLow', 'highBeam', 'workLightFront', 'workLightBack', 'pipeLight', 'lit_front',
           'lit_work_front', 'lit_work_rear', 'lit_tail_L', 'lit_tail_R', 'lit_brake', 'lit_turn_front_L', 'lit_turn_rear_L',
           'lit_turn_front_R', 'lit_turn_rear_R', 'attacherJointCutter', 'feederHouse', 'exactFillRootNodeFuel', 'pipeNode',
-          'dischargeNode', 'exhaustFlap', 'exhaustNode', 'swathAreaStart', 'swathAreaWidth', 'swathAreaHeight', 'chopperAreaStart',
+          'pipeUnloadingTrigger', 'dischargeNode', 'exhaustFlap', 'exhaustNode', 'swathAreaStart', 'swathAreaWidth',
+          'swathAreaHeight', 'chopperAreaStart',
           'chopperAreaWidth', 'chopperAreaHeight', 'rotaryScreen', 'engineShakeA', 'engineShakeB', 'engineShakeC', 'engineShakeD',
           'feederSprocket', 'needle_rpm', 'needle_speed', 'liftCylL', 'liftCylR', 'liftRodL', 'liftRodR', 'liftRodRefL',
           'liftRodRefR', 'bizonZ056_main_component') + tuple('walker%d' % i for i in range(1, 6)) + tuple(speed_of):
@@ -211,6 +216,13 @@ combine_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
         </ackermannSteeringConfigurations>
     </wheels>
     <motorized>
+        <differentialConfigurations>
+            <differentialConfiguration>
+                <differentials>
+                    <differential torqueRatio="0.5" maxSpeedRatio="1.3" wheelIndex1="1" wheelIndex2="2"/>
+                </differentials>
+            </differentialConfiguration>
+        </differentialConfigurations>
         <motorConfigurations>
             <motorConfiguration name="SW-400" hp="100" price="0">
                 <motor torqueScale="0.36" minRpm="850" maxRpm="2350" maxForwardSpeed="21" maxBackwardSpeed="8" brakeForce="4" lowBrakeForceScale="0.4" dampingRateScale="1.4">
@@ -229,14 +241,14 @@ combine_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
                 <consumer fillUnitIndex="2" usage="22" fillType="diesel"/>
             </consumerConfiguration>
         </consumerConfigurations>
-        <motorStartDuration>2200</motorStartDuration>
+        <motorStartDuration>2600</motorStartDuration>
         <exhaustFlap node="exhaustFlap" maxRot="38" rotationAxis="1"/>
         <animationNodes>
             %(motor_nodes)s
         </animationNodes>
         <dashboards>
-            <dashboard displayType="ROT" valueType="rpm" node="needle_rpm" minRot="0 0 135" maxRot="0 0 -135" minValueRot="0" maxValueRot="2500" groups="MOTOR_ACTIVE"/>
-            <dashboard displayType="ROT" valueType="speed" node="needle_speed" minRot="0 0 135" maxRot="0 0 -135" minValueRot="0" maxValueRot="25" groups="MOTOR_ACTIVE"/>
+            <dashboard displayType="ROT" valueType="rpm" node="needle_rpm" minRot="0 0 135" maxRot="0 0 -135" minValueRot="0" maxValueRot="2500"/>
+            <dashboard displayType="ROT" valueType="speed" node="needle_speed" minRot="0 0 135" maxRot="0 0 -135" minValueRot="0" maxValueRot="25"/>
         </dashboards>
         <sounds>
             %(motor_sounds)s
@@ -305,7 +317,8 @@ combine_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
     </lights>
     <attacherJoints>
         <attacherJoint node="attacherJointCutter" jointType="cutter" allowsJointLimitMovement="false" allowsLowering="true" moveTime="2.5" lowerRotLimit="0 0 0" upperRotLimit="0 0 0" lowerTransLimit="0 0 0" upperTransLimit="0 0 0" lockDownRotLimit="true" lockUpRotLimit="true">
-            <rotationNode node="feederHouse" lowerRotation="0 0 0" upperRotation="-9 0 0"/>
+            <rotationNode node="feederHouse" lowerRotation="0 0 0" upperRotation="-20 0 0"/>
+            <distanceToGround lower="0.73" upper="1.27"/>
             <schema position="0 0" rotation="0" invertX="false"/>
         </attacherJoint>
     </attacherJoints>
@@ -345,6 +358,9 @@ combine_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
         </animationNodes>
     </turnOnVehicle>
     <pipe dischargeNodeIndex="1" automaticDischarge="true">
+        <unloadingTriggers>
+            <unloadingTrigger node="pipeUnloadingTrigger"/>
+        </unloadingTriggers>
         <states num="2" unloading="2" turnOnAllowed="1 2"/>
         <pipeNodes>
             <pipeNode node="pipeNode" rotationSpeeds="0 22 0">
@@ -378,17 +394,18 @@ combine_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
 </vehicle>
 '''
 motor_sounds = [
-    sound('motorStart', 'engine_start.ogg', '0.6 3.6 -2.3', 4, 80, 1.3, 0.55),
-    sound('motorStop', 'engine_stop.ogg', '0.6 3.6 -2.3', 4, 80, 1.2, 0.55),
-    sound('motor', 'engine_idle.ogg', '0.6 3.6 -2.3', 4, 90, 1.1, 0.5, fade='fadeIn="0.4" fadeOut="0.4"',
-          pitch=[('MOTOR_RPM_REAL', 850, 1.0), ('MOTOR_RPM_REAL', 1400, 1.45)]),
-    sound('motor', 'engine_run.ogg', '0.6 3.6 -2.3', 4, 110, 1.2, 0.5, fade='fadeIn="0.4" fadeOut="0.4"',
-          pitch=[('MOTOR_RPM_REAL', 850, 0.85), ('MOTOR_RPM_REAL', 2350, 2.35)]),
+    sound('motorStart', 'motor_start.ogg', '0.6 3.6 -2.3', 4, 80, 1.0, 0.55, loops=1),
+    sound('motorStop', 'motor_stop.ogg', '0.6 3.6 -2.3', 4, 80, 0.9, 0.55, loops=1),
+    # idle layer fades out and the loaded diesel fades in as the revs rise; pitch shifts stay small
+    sound('motor', 'engine_idle_loop.ogg', '0.6 3.6 -2.3', 4, 90, 0.9, 0.5, fade='fadeIn="0.3" fadeOut="0.4"',
+          vmods=[(850, 1.0), (1400, 0.55), (2000, 0.0)], pmods=[(850, 1.0), (1500, 1.35)]),
+    sound('motor', 'engine_load_loop.ogg', '0.6 3.6 -2.3', 4, 110, 1.0, 0.5, fade='fadeIn="0.3" fadeOut="0.4"',
+          vmods=[(850, 0.3), (1300, 0.85), (2350, 1.1)], pmods=[(850, 0.62), (2000, 1.0), (2350, 1.12)]),
 ]
 combine_sounds = [
-    sound('start', 'threshing_start.ogg', '0 1.6 -1.0', 4, 70, 1.0, 0.45),
-    sound('stop', 'threshing_stop.ogg', '0 1.6 -1.0', 4, 70, 1.0, 0.45),
-    sound('work', 'threshing_loop.ogg', '0 1.6 -1.0', 4, 80, 1.1, 0.45, fade='fadeIn="0.8" fadeOut="0.8"'),
+    sound('start', 'threshing_start.ogg', '0 1.6 -1.0', 4, 70, 1.1, 0.45, loops=1),
+    sound('stop', 'threshing_stop.ogg', '0 1.6 -1.0', 4, 70, 1.1, 0.45, loops=1),
+    sound('work', 'threshing_loop.ogg', '0 1.6 -1.0', 4, 90, 1.2, 0.45, fade='fadeIn="0.5" fadeOut="0.8"'),
 ]
 xml_c = combine_xml % {
     'wheels': '\n                    '.join(wheel_xml),
@@ -446,7 +463,9 @@ header_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
     </base>
     <attachable>
         <inputAttacherJoints>
-            <inputAttacherJoint node="attacherJointInput" jointType="cutter" lowerRotationOffset="0" upperRotationOffset="0" allowsLowering="true" isDefaultLowered="false"/>
+            <inputAttacherJoint node="attacherJointInput" jointType="cutter" lowerRotationOffset="0" upperRotationOffset="0" allowsLowering="true" isDefaultLowered="false">
+                <distanceToGround lower="0.73" upper="1.27"/>
+            </inputAttacherJoint>
         </inputAttacherJoints>
         <brakeForce force="0"/>
     </attachable>
@@ -484,7 +503,7 @@ header_xml = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
 moddesc = '''<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="98">
     <author>Hoplite</author>
-    <version>1.0.0.0</version>
+    <version>1.0.1.0</version>
     <title>
         <en>Bizon Super Z056</en>
         <de>Bizon Super Z056</de>

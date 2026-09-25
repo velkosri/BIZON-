@@ -106,6 +106,10 @@ def build(dump_dir, coll, out_dir, base_name, tex_rel):
             elif phys == 'fill':
                 a += ['kinematic="true"', 'compound="true"', 'collisionFilterGroup="%s"' % FILL_GROUP,
                       'collisionFilterMask="%s"' % FILL_MASK]
+            elif phys == 'trigger':
+                # FS25 preset FILL_TRIGGER: detects trailers (FILLABLE group) under the pipe
+                a += ['kinematic="true"', 'compound="true"', 'trigger="true"', 'collisionFilterGroup="0x20000000"',
+                      'collisionFilterMask="0x40000000"']
             mats = [str(s[0] + 1) for s in sh['subsets']]
             decal_only = all(data['materials'][s[0]]['game'].get('alpha') for s in sh['subsets'])
             a.append('castsShadows="%s"' % ('false' if (phys or decal_only) else 'true'))

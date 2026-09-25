@@ -165,7 +165,7 @@ class Exporter:
             sid = self.add_shape(c.name, [c], mw)
             n['children'].append({'name': c.name, 'kind': 'shape', 'shape': sid, 't': [0, 0, 0], 'r': [0, 0, 0],
                                   'props': {k: c[k] for k in c.keys() if isinstance(c[k], (int, float, str))}, 'children': []})
-        for c in sorted([c for c in meshes if c.get('col') in ('child', 'fill')], key=lambda c: c.name):
+        for c in sorted([c for c in meshes if c.get('col') in ('child', 'fill', 'trigger')], key=lambda c: c.name):
             sid = self.add_shape(c.name, [c], mw, collision=True)
             n['children'].append({'name': c.name, 'kind': 'shape', 'shape': sid, 't': [0, 0, 0], 'r': [0, 0, 0],
                                   'props': {}, 'phys': c['col'], 'children': []})
